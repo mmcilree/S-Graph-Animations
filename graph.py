@@ -1,31 +1,49 @@
 from manim import *
 import pygraphviz
 
+import sys
+
 LINK_COLOR = DARK_BROWN
 LINK_WIDTH = 7
+IMG_FOLDER = "img_med_q"
+
+FILE_KEYS = {}
+with open("slide_keys.txt", "r") as f:
+    for i, line in enumerate(f.read().splitlines()):
+        split = line.split(" ")
+        name = split[0]
+        val = split[1]
+        if name not in FILE_KEYS:
+            FILE_KEYS[name] = {}
+        FILE_KEYS[name][val] = f"Slide{i + 1}"
 
 
 class CardContents(Group):
-    def __init__(self, name, *args, **kwargs):
-        super().__init__(*args, **kwargs, z_index=3)
 
-        self.rect = PlaceHolderRectangle()
+    def __init__(self, name, start_zoomed=False, *args, **kwargs):
+        super().__init__(*args, **kwargs, z_index=-1)
 
-        self.imgs_enabled = False
+        self.rect = PlaceHolderRectangle(z_index=-1)
+        self.imgs_enabled = True
         self.imgs = {}
-
+        self.name = name
         if self.imgs_enabled:
-            self.current_icon = "ICON"
+            self.current_icon = "1.0"
             icon = self.get_image(self.current_icon)
 
-            self.current_slide = "SLIDE"
+            self.current_slide = "1.1"
             slide = self.get_image(self.current_slide)
 
-            self.currently_showing = self.get_current_icon()
-            icon.set_opacity(1)
+            if start_zoomed:
+                self.currently_showing = self.get_current_slide()
+                slide.set_opacity(1)
+            else:
+                self.currently_showing = self.get_current_icon()
+                icon.set_opacity(1)
 
             self.add(self.rect)
-            self.add(icon, slide)
+            self.add(icon)
+            self.add(slide)
         else:
             self.text = Text(name, color=BLACK)
             if self.text.width >= self.rect.width * 0.8:
@@ -38,9 +56,12 @@ class CardContents(Group):
         if key in self.imgs:
             return self.imgs[key]
 
-        img = ImageMobject(f"./card_imgs/Caldeira/{key}.PNG").set_opacity(0)
-        if img.width >= self.rect.width * 0.9:
-            img.scale_to_fit_width(self.rect.width * 0.85)
+        img = ImageMobject(
+            f"./{IMG_FOLDER}/{FILE_KEYS[self.name][key]}.png",
+            z_index=0,
+        ).set_opacity(0)
+        img.scale_to_fit_width(self.rect.width * 0.9)
+
         img.move_to(self.rect.get_center())
         self.imgs[key] = img
         self.add(img)
@@ -57,22 +78,31 @@ class CardContents(Group):
     def set_opacity(self, value):
         self.rect.set_opacity(value)
         if self.imgs_enabled:
-            self.img.set_opacity(value)
+            self.imgs[self.currently_showing].set_opacity(value)
         else:
             self.text.set(opacity=value)
 
     @override_animate(show_img)
-    def _animate_show_img(self, key, anim_args=None):
+    def _animate_show_img(self, key, lag_ratio=None, anim_args=None):
         if anim_args is None:
             anim_args = {}
 
         if self.imgs_enabled and key != self.currently_showing:
             current_img = self.get_visible()
             new_img = self.get_image(key)
+            self.add(new_img)
+            if lag_ratio is not None:
+                anim = AnimationGroup(
+                    new_img.animate.set_opacity(1),
+                    current_img.animate.set_opacity(0),
+                    lag_ratio=0.3,
+                )
+            else:
+                anim = AnimationGroup(
+                    new_img.animate.set_opacity(1),
+                    current_img.animate.set_opacity(0),
+                )
 
-            anim = AnimationGroup(
-                new_img.animate.set_opacity(1), current_img.animate.set_opacity(0)
-            )
             self.currently_showing = key
             return anim
         else:
@@ -117,7 +147,7 @@ class SplineEdge(VMobject):
         control_points,
         stroke_color=LINK_COLOR,
         stroke_width=7,
-        z_index=0,
+        z_index=-2,
         cap_style=CapStyleType.ROUND,
         **kwargs,
     ):
@@ -145,9 +175,15 @@ class CardGraph(Group):
         self.card_positions = {}
         self.spline_data = {}
 
-    def add_link(self, name1, name2, spline_data=None):
-        self.add_card(name1)
-        self.add_card(name2)
+    def add_link(
+        self,
+        name1,
+        name2,
+        spline_data=None,
+        start_zoomed=False,
+    ):
+        self.add_card(name1, start_zoomed=start_zoomed)
+        self.add_card(name2, start_zoomed=start_zoomed)
 
         if (name1, name2) not in self.links:
             try:
@@ -168,13 +204,17 @@ class CardGraph(Group):
             # self.add(self.links[(name1, name2)])
         return self.links[(name1, name2)]
 
-    def add_card(self, name, pos=None):
+    def add_card(self, name, pos=None, start_zoomed=False):
         if name not in self.cards:
             try:
-                self.cards[name] = CardContents(name).move_to(self.card_positions[name])
+                self.cards[name] = CardContents(
+                    name, start_zoomed=start_zoomed
+                ).move_to(self.card_positions[name])
             except KeyError:
                 if pos is not None:
-                    self.cards[name] = CardContents(name).move_to(pos)
+                    self.cards[name] = CardContents(
+                        name, start_zoomed=start_zoomed
+                    ).move_to(pos)
                 else:
                     raise Exception(
                         f"Position data for card {name}, not found in self.card_positions"
@@ -183,37 +223,55 @@ class CardGraph(Group):
         return self.cards[name]
 
     @override_animate(add_link)
-    def _add_link_animate(self, name1, name2, spline_data=None, anim_args=None):
+    def _add_link_animate(
+        self, name1, name2, spline_data=None, other_end=False, anim_args=None
+    ):
         if anim_args is None:
             anim_args = {}
 
         edge = self.add_link(name1, name2, spline_data=spline_data)
-        return AnimationGroup(
-            GrowFromPoint(edge, edge.get_start(), **anim_args),
-            # So the endpoints stay in front of the edge?
+
+        return GrowFromPoint(
+            edge, edge.get_end() if other_end else edge.get_start(), **anim_args
         )
 
     @override_animate(add_card)
-    def _add_card_animate(self, card, pos=None, anim_args=None):
+    def _add_card_animate(self, card, pos=None, start_zoomed=False, anim_args=None):
         if anim_args is None:
             anim_args = {}
-        card = self.add_card(card, pos=pos)
+        card = self.add_card(card, pos=pos, start_zoomed=start_zoomed)
         return GrowFromCenter(card, **anim_args)
 
-    def add_card_from(self, from_name, to_add, pos=None, spline_data=NO_SCENE_MESSAGE):
+    def add_card_from(
+        self,
+        from_name,
+        to_add,
+        pos=None,
+        start_zoomed=False,
+        spline_data=None,
+    ):
+        card = self.add_card(to_add, pos=pos, start_zoomed=start_zoomed)
         link = self.add_link(from_name, to_add, spline_data=spline_data)
-        card = self.add_card(to_add, pos=pos)
         return card, link
 
     @override_animate(add_card_from)
     def _add_card_from(
-        self, from_name, to_add, pos=None, spline_data=None, anim_args=None
+        self,
+        from_name,
+        to_add,
+        pos=None,
+        spline_data=None,
+        start_zoomed=False,
+        anim_args=None,
     ):
-
         if anim_args is None:
             anim_args = {}
         card, link = self.add_card_from(
-            from_name, to_add, pos=pos, spline_data=spline_data
+            from_name,
+            to_add,
+            pos=pos,
+            spline_data=spline_data,
+            start_zoomed=start_zoomed,
         )
 
         return AnimationGroup(
@@ -437,6 +495,7 @@ class CardGraphScene(MovingCameraScene):
         self.crosses = {}
         self.g = CardGraph()
         self.skip_animations = True
+        self.time_s = 0
 
     def prepare_card(self, name, add=True):
         if name not in self.nodes:
@@ -464,24 +523,24 @@ class CardGraphScene(MovingCameraScene):
         elif (name2, name1) in self.edges:
             self.edges.remove((name2, name1))
 
-    def add_card(self, name):
+    def add_card(self, name, start_zoomed=False):
         if self.skip_animations:
-            self.g.add_card(name)
+            self.g.add_card(name, start_zoomed=start_zoomed)
             return NULL_ANIM
-        return self.g.animate.add_card(name)
+        return self.g.animate.add_card(name, start_zoomed=start_zoomed)
 
-    def add_card_from(self, name1, name2):
+    def add_card_from(self, name1, name2, start_zoomed=False):
         if self.skip_animations:
-            self.g.add_card_from(name1, name2)
+            self.g.add_card_from(name1, name2, start_zoomed=start_zoomed)
             return NULL_ANIM
-        return self.g.animate.add_card_from(name1, name2)
+        return self.g.animate.add_card_from(name1, name2, start_zoomed=start_zoomed)
 
-    def add_link(self, name1, name2):
+    def add_link(self, name1, name2, other_end=False):
         if self.skip_animations:
             self.g.add_link(name1, name2)
             return NULL_ANIM
 
-        return self.g.animate.add_link(name1, name2)
+        return self.g.animate.add_link(name1, name2, other_end=other_end)
 
     def calculate_layout(self, prev=True):
 
@@ -531,10 +590,9 @@ class CardGraphScene(MovingCameraScene):
         if self.skip_animations:
             return NULL_ANIM
 
-        card = self.g.cards[name]
         return AnimationGroup(
             self.camera.frame.animate.scale_to_fit_width(1.58).move_to(
-                card.get_center()
+                self.current_pos(name)
             ),
             self.g.animate.update_card_icons(1.58),
         )
@@ -560,7 +618,7 @@ class CardGraphScene(MovingCameraScene):
                 height=card.height + 0.2,
                 color=PURE_RED,
                 stroke_width=LINK_WIDTH,
-                z_index=5,
+                z_index=1,
             )
         ).move_to(card.get_center())
         self.ovals.append(oval)
@@ -575,15 +633,20 @@ class CardGraphScene(MovingCameraScene):
             anims.append(FadeOut(o))
         return AnimationGroup(*anims)
 
-    def frame_cards(self, *cards, margin=0.5):
+    def frame_cards(self, *cards, margin=0.5, no_update=False):
         if self.skip_animations:
             return NULL_ANIM
         box = self.bounding_box(*cards)
-        print("frame_cards: ", end="")
         return AnimationGroup(
             self.camera.auto_zoom(box, margin=margin),
-            self.g.animate.update_card_icons(
-                box.width + margin,
+            *(
+                []
+                if no_update
+                else [
+                    self.g.animate.update_card_icons(
+                        box.width + margin,
+                    )
+                ]
             ),
         )
 
@@ -618,23 +681,28 @@ class CardGraphScene(MovingCameraScene):
     def cross_card(self, name):
         if self.skip_animations:
             return NULL_ANIM
-        self.crosses[name] = Text(
-            "×",
-            color=PURE_RED,
-            font="Helvetica",
-            font_size=200,
-            z_index=5,
-            fill_opacity=0.5,
+
+        self.crosses[name] = (
+            Text(
+                "×",
+                color=PURE_RED,
+                font="Helvetica",
+                font_size=200,
+                z_index=1,
+            )
+            .set_opacity(0.5)
+            .move_to(self.current_pos(name))
+            .scale_to_fit_width(self.g.cards[name].width)
         )
-        self.crosses[name].move_to(self.current_pos(name)).scale_to_fit_width(
-            self.g.cards[name].width
-        )
-        return FadeIn(self.crosses[name])
+
+        self.add(self.crosses[name])
+        return GrowFromCenter(self.crosses[name])
 
     def uncross_card(self, name):
         if self.skip_animations:
             return NULL_ANIM
-        return FadeOut(self.crosses[name])
+
+        return self.crosses[name].animate.set_opacity(0)
 
     def pan_to(self, name):
         if self.skip_animations:
@@ -675,8 +743,34 @@ class CardGraphScene(MovingCameraScene):
         self.skip_animations = True
         self.next_section(skip_animations=True)
 
-    def play(self, *args, run_time=1, **kwargs):
+    def change_slide(self, name, key):
+        self.g.cards[name].current_slide = key
+        return self.g.cards[name].animate.show_img(key, lag_ratio=0.3)
+
+    def set_slide(self, name, key):
+        self.g.cards[name].current_slide = key
+
+    def set_icon(self, name, key):
+        self.g.cards[name].current_icon = key
+
+    def wait_until(self, min, sec, cent):
+        # self.wait(0.1)
+        # return
+        until_sec = min * 60 + sec + 0.001 * cent
+        if until_sec > self.time:
+            wait_time = until_sec - self.time
+            self.play(Wait(frozen_frame=True), run_time=wait_time)
+        else:
+            print(f"No time to wait! ({min}:{sec}.{cent})")
+
+    def play(self, *args, run_time=1.5, **kwargs):
+        # self.time += run_time
         for a in args:
             if isinstance(a, NullAnim):
                 return
+
         super().play(*args, run_time=run_time, **kwargs)
+
+    def wait(self, duration, *args, **kwargs):
+        # self.time += duration
+        super().wait(duration, *args, **kwargs)
