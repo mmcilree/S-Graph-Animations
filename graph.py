@@ -82,6 +82,21 @@ class CardContents(Group):
         else:
             self.text.set(opacity=value)
 
+    @override_animate(set_opacity)
+    def _animate_set_opacity(self, value, anim_args=None):
+        if anim_args is None:
+            anim_args = {}
+
+        anims = []
+
+        anims.append(self.rect.animate.set_opacity(value))
+        # print(self.name, " setting opacity to ", value)
+        if self.imgs_enabled:
+            anims.append(self.imgs[self.currently_showing].animate.set_opacity(value))
+        else:
+            anims.append(self.text.animate.set(opacity=value))
+        return AnimationGroup(*anims)
+
     @override_animate(show_img)
     def _animate_show_img(self, key, lag_ratio=None, anim_args=None):
         if anim_args is None:
@@ -252,6 +267,7 @@ class CardGraph(Group):
     ):
         card = self.add_card(to_add, pos=pos, start_zoomed=start_zoomed)
         link = self.add_link(from_name, to_add, spline_data=spline_data)
+
         return card, link
 
     @override_animate(add_card_from)
@@ -273,10 +289,11 @@ class CardGraph(Group):
             spline_data=spline_data,
             start_zoomed=start_zoomed,
         )
-
+        start = link.get_start()
+        # return AnimationGroup(
         return AnimationGroup(
-            GrowFromPoint(link, link.get_start(), **anim_args),
-            GrowFromPoint(card, link.get_start(), **anim_args),
+            GrowFromPoint(card, start, **anim_args),
+            GrowFromPoint(link, start, **anim_args),
         )
 
     def calculate_layout(links, additional_cards=[], prev_pos=None):
@@ -735,11 +752,11 @@ class CardGraphScene(MovingCameraScene):
 
         return AnimationGroup(*anims)
 
-    def start_HERE(self):
+    def FROM(self):
         self.skip_animations = False
         self.next_section(skip_animations=False)
 
-    def end_HERE(self):
+    def UNTIL(self):
         self.skip_animations = True
         self.next_section(skip_animations=True)
 

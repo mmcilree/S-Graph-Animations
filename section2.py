@@ -12,6 +12,7 @@ class Section2(CardGraphScene):
 
         self.wait_until(2, 20, 520)
 
+        # self.start_HERE()
         # Create "Thomas"=Eric, link to Jen, zoom fully on "Thomas"
         self.play(self.frame_cards("Jen", "Eric"))
         self.play(self.add_link("Jen", "Eric"), self.add_card("Eric"))
@@ -67,7 +68,8 @@ class Section2(CardGraphScene):
         self.wait_until(3, 37, 560)
         # Create Caldeira and link to VMS
         self.play(
-            self.add_card_from("VMS", "Caldeira"),
+            self.add_card_from("VMS", "Caldeira", start_zoomed=True),
+            self.frame_cards("VMS", "Caldeira"),
         )
         # Zoom fully on Caldeira
         self.play(self.fully_zoom_card("Caldeira"))
@@ -155,13 +157,15 @@ class Section2(CardGraphScene):
         self.play(self.frame_cards("VMS", "Prix"))
 
         # Create Prix Bouchard card (emerge from VMS) and zoom in on
-        self.play(self.add_card_from("VMS", "Prix"))
+        self.play(self.add_card_from("VMS", "Prix"), self.frame_cards("VMS", "Prix"))
         self.play(self.fully_zoom_card("Prix"))
 
         self.wait_until(9, 35, 200)
         # Create Lewis Looper card (emerge from VMS)
         self.play(self.frame_cards("VMS", "Looper", "Prix"))
-        self.play(self.add_card_from("VMS", "Looper"))
+        self.play(
+            self.add_card_from("VMS", "Looper"), self.frame_cards("VMS", "Looper")
+        )
 
         self.wait_until(9, 55, 0)
         # Create Artefacts (partially zoom on but not fully) and link to VMS and Looper
@@ -248,6 +252,7 @@ class Section2(CardGraphScene):
             self.unhighlight_link("Jen", "Eric"),
             self.frame_cards("Jen", "Eric", "Sum_Tape", "VMS"),
         )
+        self.wait_until(13, 4, 0)
 
         self.play(
             self.add_link("Eric", "Sum_Tape"),
@@ -255,12 +260,12 @@ class Section2(CardGraphScene):
             self.add_card("Sum_Tape"),
             self.fully_zoom_card("Sum_Tape"),
         )
-        self.wait(1)
+        # self.wait(1)
 
-        self.wait_until(13, 18, 0)
+        self.wait_until(13, 17, 0)
 
         # Link Moody and Ilsa to Sum_tape
-        self.play(self.frame_cards("Sum_Tape", "Moody", "Sum_Tape"))
+        self.play(self.frame_cards("Sum_Tape", "Moody", "Ilsa"))
 
         self.play(
             self.add_link("Moody", "Sum_Tape"),
@@ -377,11 +382,9 @@ class Section2(CardGraphScene):
         self.wait_until(16, 52, 320)
 
         # Create Dejardins and link to Eric, fully zoom in on
-        self.play(self.frame_cards(*MODERN_DAY_CARDS))
+        self.play(self.frame_cards("Jen", "Eric", "Desjardins", "Moody", "Ilsa"))
         self.play(self.animate_update_layout())
 
-        self.wait_until(16, 52, 320)
-        self.play(self.frame_cards("Eric", "Desjardins", "Moody"))
         self.play(self.add_card("Desjardins"), self.add_link("Eric", "Desjardins"))
         self.play(self.fully_zoom_card("Desjardins"))
 
@@ -563,14 +566,17 @@ class Section2(CardGraphScene):
         self.play(self.cross_card("Sum_Tape"), self.cross_card("Sobreiro"))
 
         self.wait_until(24, 55, 560)
+        self.play(
+            self.opacity_except(
+                "Moody", "Artefacts", "Sum_Tape", "Sobreiro", edges=[], opacity=1
+            )
+        )
+
         # Pan to Eric
         self.play(
             self.unhighlight_card("Artefacts"),
             self.uncross_card("Sum_Tape"),
             self.uncross_card("Sobreiro"),
-            self.opacity_except(
-                "Moody", "Artefacts", "Sum_Tape", "Sobreiro", opacity=1
-            ),
             self.frame_cards("Eric", margin=2.5),
         )
 
@@ -603,7 +609,7 @@ class Section2(CardGraphScene):
 
         self.set_slide("Ilsa", "1.3")
         self.set_slide("Eric", "2.6")
-        self.wait_until(27, 47, 100)
+        self.wait_until(27, 29, 100)
         # Zoom fully on Ilsa
         self.play(self.fully_zoom_card("Ilsa"))
 
@@ -644,7 +650,7 @@ class Section2(CardGraphScene):
         )
         self.wait_until(28, 40, 0)
 
-        self.fully_zoom_card("Sum_Tape"),
+        self.play(self.fully_zoom_card("Sum_Tape")),
 
         self.wait_until(29, 1, 740)
         # Show Jen and Eric
@@ -699,7 +705,7 @@ class Section2(CardGraphScene):
 
     def construct(self):
         self.next_section(skip_animations=True)
-        self.start_HERE()
+        self.FROM()
         # Initial set up
         self.prepare_link("Jen", "Eric")
         self.prepare_link("Eric", "Moody")
@@ -763,4 +769,5 @@ class Section2(CardGraphScene):
         self.calculate_layout()
 
         self.sequence4()
+
         self.sequence5()
