@@ -705,7 +705,7 @@ class Section2(CardGraphScene):
 
     def construct(self):
         self.next_section(skip_animations=True)
-        self.FROM()
+        self.starth()
         # Initial set up
         self.prepare_link("Jen", "Eric")
         self.prepare_link("Eric", "Moody")
@@ -728,10 +728,10 @@ class Section2(CardGraphScene):
 
         self.sequence1()
 
-        self.remove_link("Eric", "Caldeira")
-        self.remove_link("Eric", "VMS")
-        self.remove_link("Jen", "VMS")
-        self.remove_link("Jen", "Caldeira")
+        self.unprepare_link("Eric", "Caldeira")
+        self.unprepare_link("Eric", "VMS")
+        self.unprepare_link("Jen", "VMS")
+        self.unprepare_link("Jen", "Caldeira")
 
         self.prepare_link("VMS", "Prix")
         self.prepare_link("VMS", "Looper")

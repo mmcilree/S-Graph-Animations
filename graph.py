@@ -5,7 +5,7 @@ import sys
 
 LINK_COLOR = DARK_BROWN
 LINK_WIDTH = 7
-IMG_FOLDER = "img_med_q"
+IMG_FOLDER = "img_low_q"
 
 FILE_KEYS = {}
 with open("slide_keys.txt", "r") as f:
@@ -431,7 +431,7 @@ class CardGraph(Group):
             #     raise Exception(
             #         f"Spline data for link ({name1}, {name2}), not found in new_spline_data"
             #     )
-        self.card_positions = new_card_positions
+
         self.spline_data = new_spline_data
         return AnimationGroup(anims)
 
@@ -446,7 +446,11 @@ class CardGraph(Group):
             anim_args = {}
         removed = self.remove_link(name1, name2)
         if removed is not None:
-            return FadeOut(removed)
+            return (
+                removed.animate.move_to(self.card_positions[name1])
+                .scale(0)
+                .set_opacity(0)
+            )
         return AnimationGroup(*[])
 
     def get_graph_as_group(self):
@@ -534,7 +538,7 @@ class CardGraphScene(MovingCameraScene):
             # Remove all edges connected to this node
             self.edges = [e for e in self.edges if name not in e]
 
-    def remove_link(self, name1, name2):
+    def unprepare_link(self, name1, name2):
         if (name1, name2) in self.edges:
             self.edges.remove((name1, name2))
         elif (name2, name1) in self.edges:
@@ -543,6 +547,7 @@ class CardGraphScene(MovingCameraScene):
     def add_card(self, name, start_zoomed=False):
         if self.skip_animations:
             self.g.add_card(name, start_zoomed=start_zoomed)
+            self.add(self.g.cards[name])
             return NULL_ANIM
         return self.g.animate.add_card(name, start_zoomed=start_zoomed)
 
@@ -555,9 +560,21 @@ class CardGraphScene(MovingCameraScene):
     def add_link(self, name1, name2, other_end=False):
         if self.skip_animations:
             self.g.add_link(name1, name2)
+            self.add(self.g.links[name1, name2])
             return NULL_ANIM
 
         return self.g.animate.add_link(name1, name2, other_end=other_end)
+
+    def remove_link(self, name1, name2):
+        self.unprepare_link(name1, name2)
+        if self.skip_animations:
+            removed = self.g.remove_link(name1, name)
+            self.remove(removed)
+            return NULL_ANIM
+
+        self.remove(self.g.links[name1, name2])
+        ret = self.g.animate.remove_link(name1, name2)
+        return ret
 
     def calculate_layout(self, prev=True):
 
@@ -752,11 +769,11 @@ class CardGraphScene(MovingCameraScene):
 
         return AnimationGroup(*anims)
 
-    def FROM(self):
+    def starth(self):
         self.skip_animations = False
         self.next_section(skip_animations=False)
 
-    def UNTIL(self):
+    def endh(self):
         self.skip_animations = True
         self.next_section(skip_animations=True)
 
@@ -771,6 +788,8 @@ class CardGraphScene(MovingCameraScene):
         self.g.cards[name].current_icon = key
 
     def wait_until(self, min, sec, cent):
+        if self.skip_animations:
+            return
         # self.wait(0.1)
         # return
         until_sec = min * 60 + sec + 0.001 * cent
