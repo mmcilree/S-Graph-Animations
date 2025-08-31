@@ -1,5 +1,6 @@
 from manim import *
 from graph import *
+from card_scene import *
 
 
 class Section3(CardGraphScene):
@@ -71,8 +72,6 @@ class Section3(CardGraphScene):
 
     def construct(self):
         self.next_section(skip_animations=True)
-        self.skip_animations = False
-        # self.starth()
         self.initialise_layout()
         self.camera.frame.move_to(self.bounding_box())
         self.play(self.frame_cards())
@@ -96,6 +95,7 @@ class Section3(CardGraphScene):
             ("Caldeira", "Eric"),
             ("Eric", "Desjardins"),
             ("Eric", "Artefacts"),
+            ("Desjardins", "Artefacts"),
         ]
 
         for r in remove_edges:
@@ -118,7 +118,8 @@ class Section3(CardGraphScene):
         self.prepare_link("Feuerbach", "Ferrara")
         self.prepare_link("Summersby", "Ekstrom")
         self.prepare_link("S_Org", "MacInnes")
-        self.prepare_link("S_Org", "Vaclav")
+        # sself.prepare_link("S_Org", "Vaclav")
+        self.prepare_link("S_Org", "Bridge_Jump")
         self.prepare_link("Vaclav", "Bridge_Jump")
 
         # "it's time to talk about the S organisation"
@@ -127,13 +128,16 @@ class Section3(CardGraphScene):
 
         self.calculate_layout(prev=True)
         self.play(self.frame_cards(*sec_2_cards))
-
-        print(self.nodes)
         self.play(
+            *[self.remove_link(*r) for r in remove_edges],
             self.animate_update_layout(),
-            # *[self.remove_link(*r) for r in remove_edges],
         )
-        self.play(self.frame_cards("S_Org", margin=4), self.add_card("S_Org"))
+
+        self.play(
+            self.frame_cards("S_Org", margin=4),
+            self.add_card("S_Org"),
+            self.add_link("S_Org", "VMS"),
+        )
         self.play(self.fully_zoom_card("S_Org"))
 
         # "some suspects are clearly the basis for a group of characters featured in SoT."
@@ -391,17 +395,16 @@ class Section3(CardGraphScene):
         self.play(self.frame_cards("Ekstrom", "Sum_Tape"))
         self.play(self.fully_zoom_card("Ekstrom"))
 
-        self.starth()
-
         # "So all these individual ties further the idea that the candidates worked together.[km]"
         # [km]Reshuffle diagram so the candidates are all connected to the S organisation rather than each other. But leave Durand/ekstrom and durand/ferrara
         self.wait_until(12, 19, 0)
-        self.prepare_link("Ekstrom", "S_Org")
-        self.prepare_link("Summersby", "S_Org")
-        self.prepare_link("Durand", "S_Org")
-        self.prepare_link("Feuerbach", "S_Org")
-        self.prepare_link("Ferrara", "S_Org")
-        self.prepare_link("Summersby", "S_Org")
+        new_edges = [
+            ("Ekstrom", "S_Org"),
+            ("Summersby", "S_Org"),
+            ("Durand", "S_Org"),
+            ("Feuerbach", "S_Org"),
+            ("Ferrara", "S_Org"),
+        ]
         remove_edges = [
             ("Ekstrom", "Durand"),
             ("Durand", "Ferrara"),
@@ -412,113 +415,323 @@ class Section3(CardGraphScene):
             ("Summersby", "Ekstrom"),
         ]
 
-        self.calculate_layout()
+        for e in new_edges:
+            self.prepare_link(*e)
+        for e in remove_edges:
+            self.unprepare_link(*e)
         self.play(
             self.frame_cards(
                 "Ekstrom", "Durand", "Feuerbach", "Ferrara", "Wechsler", "Summersby"
             )
         )
+        s_org_pos = self.current_pos("S_Org")
+        self.calculate_layout()
         self.play(
-            self.animate_update_layout(),
+            self.frame_cards("Ekstrom", "Durand", "Feuerbach", "Ferrara", "Summersby"),
             *[self.remove_link(*r) for r in remove_edges],
+            self.animate_update_layout(),
+            *[self.add_link(*e, from_point=s_org_pos) for e in new_edges],
+            run_time=3,
         )
+
         # "because that doesn’t identify who Caldeira’s Straka was[kn]"
         # [kn]Zoom on Caldeira and Straka
+        self.wait_until(12, 32, 40)
+        self.play(self.frame_cards("Caldeira", "VMS"))
 
         # "V. Finch is probably Summersby[kr]"
         # [ks]Link Sum with S_org in background
 
         # "why exactly does VMS need to stay secret anyway[ku]"
         # [ku]Zoom back on VMS card 1.4
+        self.set_slide("VMS", "1.4")
+        self.wait_until(13, 37, 60)
+        self.play(self.fully_zoom_card("VMS"))
 
         # "Re-introducing Hermes Bouchard:[kv]"
         # [kv]Create and zoom on Bouchard 1.1
+        self.prepare_link("Calais", "Bouchard")
+        self.prepare_link("Prix", "Bouchard")
+        self.prepare_link("Sant_Deaths", "Bouchard")
+        self.prepare_link("Prix", "Calais")
+        self.prepare_link("Bouchard", "Arp")
+        self.prepare_link("Wechsler", "Arp")
 
-        # "Re-introducing Hermes Bouchard:[kv]"
+        self.unprepare_link("Ekstrom", "Sum_Tape")
+        self.calculate_layout(prev=True, seed=2, esep=0.1)
+        self.play(
+            self.frame_cards("Bouchard", margin=2),
+            self.remove_link("Ekstrom", "Sum_Tape"),
+            self.animate_update_layout(),
+            self.add_card("Bouchard"),
+            self.add_link("Bouchard", "Prix"),
+        )
+        self.play(self.fully_zoom_card("Bouchard"))
+        # "Bouchard inspired antagonists in both Wineblood"
         # [kw]Switch to Bouchard 1.2
+        self.wait_until(14, 0, 160)
+        self.play(self.change_slide("Bouchard", "1.2"))
 
         # "So here’s the issue[kx]"
         # [kx]Pan to Prix Bouchard card 1.1, switch to 1.2
+        self.wait_until(14, 11, 20)
+        self.play(self.fully_zoom_card("Prix"))
+        self.play(self.change_slide("Prix", "1.2"))
 
         # "Caldeira claims [ky]it was an accusation towards Bouchard."
         # [ky]Switch to 1.3
+        self.wait_until(14, 19, 840)
+        self.play(self.change_slide("Prix", "1.3"))
 
         # "deaths of syndicalist agitators and was behind a recent massacre [kz]of factory workers in Calais."
         # [kz]Create Calais massacre card and link to Bouchard and Prix Bouchard
+        self.wait_until(14, 29, 500)
+        self.play(self.frame_cards("Bouchard", "Prix", "Calais"))
+        self.play(
+            self.add_card("Calais"),
+            self.add_link("Calais", "Prix"),
+            self.add_link("Bouchard", "Calais", other_end=True),
+        )
 
         # "This is described by FXC in Chapter 4:[la]"
         # [la]Zoom into Calais card but fade to drawing of massacre (or other image) with quote appearing on top. Then at end of quote, fade back into actual Calais card
+        self.wait_until(14, 31, 40)
+        self.play(self.fully_zoom_card("Calais"))
 
         # "Eric says Straka’s note ["
         # [lb]Pan to Prix Bouchard 1.4
+        self.wait_until(14, 58, 220)
+        self.set_slide("Prix", "1.4")
+        self.play(self.fully_zoom_card("Prix"))
 
         # "disappeared in 1983, and quotes it[lc]: "You seek a world populated by trick monkeys who dance to your tunes for the empty promise of coins""
         # [lc]Switch to Prix 1.5
+        self.wait_until(15, 0, 0)
+        self.play(self.change_slide("Prix", "1.5"))
 
         # " Jen and FXC[ld] both seem to agree that this accusation d"
         # [ld]Switch to Prix 1.6
+        self.wait_until(15, 10, 380)
+        self.play(self.change_slide("Prix", "1.6"))
 
         # "she confirmed that "Everything goes back to Calais"."
         # [le]Pan to Calais 1.2
+        self.wait_until(15, 17, 60)
+        self.set_slide("Calais", "1.2")
+        self.play(self.fully_zoom_card("Calais"))
 
         # "likely[lf] suspect for the Santorini man murders."
         # [lf]Link Bouchard card to Santorini man murders
+        self.wait_until(15, 21, 720)
+        self.play(self.frame_cards("Bouchard", "Sant_Deaths"))
+        self.play(self.add_link("Bouchard", "Sant_Deaths"))
 
         # "This was at least Desjardins’ theory.[lg]"
         # [lg]Could circle Dejardins (or not, for easy)
+        self.wait_until(15, 25, 500)
+        self.play(self.frame_cards("Desjardins", margin=2))
+        self.play(self.circle_card("Desjardins"))
 
         # "But how exactly would Bouchard have that much influence if his company ended?[lh]"
         # [lh]Zoom back to Bouchard card 1.3
+        self.wait_until(15, 28, 240)
+        self.set_slide("Bouchard", "1.3")
+        self.play(self.fully_zoom_card("Bouchard"))
 
         # "to spawn and control a bunch of shell companies["
         # [li]Switch to Bouchard 1.4
+        self.wait_until(15, 36, 160)
+        self.play(self.change_slide("Bouchard", "1.4"))
 
         # "manufacturer called Arp Syndikat.[lj]"
         # [lj]Create Arp card from Bouchard and zoom on arp 1.1
+        self.wait_until(15, 45, 60)
+        self.play(self.frame_cards("Bouchard", "Arp"))
+        self.play(
+            self.add_card_from("Bouchard", "Arp"), self.frame_cards("Bouchard", "Arp")
+        )
 
         # "In SoT itself, the Bouchard stand-in ("
         # [lk]ARP 1.2
+        self.wait_until(16, 1, 960)
+        self.play(self.change_slide("Arp", "1.2"))
 
         # "Hermes Bouchard had a son[lp]"
         # [lp]Zoom on Bouchard 1.5
+        self.wait_until(16, 53, 680)
+        self.set_slide("Bouchard", "1.5")
+        self.play(self.fully_zoom_card("Bouchard"))
 
         # "interview about Vaclav Straka’s death[lq]"
         # [lq]Circle Prague jump and feuerbach
+        self.wait_until(17, 17, 100)
+        self.play(self.frame_cards("Feuerbach", "Bridge_Jump"))
+        self.play(self.circle_card("Feuerbach"))
+        self.play(self.circle_card("Bridge_Jump"))
 
         # "This is therefore huge - [lt]the earliest and only record w"
         # [lt]Move back to diagram, zoom on group as a whole if possible, connect S org to Prague bridge jump
+        self.wait_until(17, 42, 20)
+        self.play(
+            self.frame_cards(
+                "Feuerbach", "Ferrara", "Ekstrom", "Durand", "S_Org", "Bridge_Jump"
+            )
+        )
+        self.play(
+            self.animate_update_layout(),
+            self.clear_circles(),
+            self.opacity_except(
+                "Feuerbach",
+                "Ferrara",
+                "Ekstrom",
+                "Durand",
+                "S_Org",
+                "Bridge_Jump",
+                "Vaclav",
+            ),
+            self.add_link("Bridge_Jump", "S_Org", other_end=True),
+            run_time=3,
+        )
 
         # "except an alive Vaclav Straka?[lu]"
         # [lu]Connect Vaclav card to S organisation
-
+        self.play(self.pan_to("Vaclav"))
         # [lv]Possible reconfig
 
         # "His candidacy [lw]now works on multiple levels."
         # [lw]Zoom on Vaclav card 1.6
+        self.set_slide("Vaclav", "1.6")
 
+        self.play(self.fully_zoom_card("Vaclav"), run_time=3)
+        self.play(
+            self.opacity_except(
+                "Feuerbach",
+                "Ferrara",
+                "Ekstrom",
+                "Durand",
+                "S_Org",
+                "Bridge_Jump",
+                "Vaclav",
+                opacity=1,
+            ),
+        )
         # For context:[lx] the first four chapters consist of an unnamed protagonist being reborn from a river, meeting a group who share names with the birds in this hotel register, and witnessing a massacre of striking workers organised by an evil factory owner.
+        self.wait_until(18, 10, 860)
+        self.play(
+            self.frame_cards(
+                "Feuerbach", "Ferrara", "Ekstrom", "Durand", "S_Org", "Bridge_Jump"
+            ),
+            run_time=6,
+        )
         # [lx]Pan towards bridge jump, then over S org group, then over Calais massacre. Don't need to totally zoom in, want to get picture of how all connected.
+        self.play(self.frame_cards("Calais", margin=9), run_time=6)
 
         # "best option for Caldeira, which she herself admits to Eric[ly]"
         # [ly]Either show quote, pan to Caldeira card, or stay on Vaclav for easiest
+        self.wait_until(18, 28, 860)
+        self.play(self.frame_cards("VMS", "Caldeira"))
 
         # "Vaclav was “holding his manuscript when he jumped"[lz]"
         # [lz]Go to Vaclav 1.7
+        self.wait_until(18, 44, 360)
+        self.set_slide("Vaclav", "1.7")
+        self.play(self.fully_zoom_card("Vaclav"))
 
         # "One of the few things we know about Ekstrom is that he was a great swimmer at university.[ma]"
         # [ma]Zoom in on Ekstrom 1.5
+        self.wait_until(18, 47, 440)
+        self.play(self.frame_cards("Vaclav", "Ekstrom"))
+        self.set_slide("Ekstrom", "1.5")
+        self.play(self.fully_zoom_card("Ekstrom"))
 
         # "Then he and Durand[mc]"
         # [mc]Zoom out to show both E and D
+        self.wait_until(18, 57, 420)
+        self.play(
+            self.frame_cards("Ekstrom", "Durand"),
+        )
 
         # "timeline: Durand and Ekstrom[me]"
         # [me]Pan to above Durand and ekstrom (but not fully in), then Vaclav
+        self.wait_until(19, 9, 500)
 
+        self.wait_until(19, 11, 800)
+        self.play(self.pan_to("Vaclav"))
+
+        self.wait_until(19, 16, 700)
+
+        self.starth()
+        self.play(
+            self.frame_cards(
+                "Feuerbach",
+                "Vaclav",
+                "Ferrara",
+                "Ekstrom",
+                "Durand",
+                # "S_Org",
+                "Bridge_Jump",
+            ),
+        )
         # "like-minded friends[mf]"
         # [mf]Circle group OR just show in pan
 
         # "use Vaclav’s anonymity to make political statements they otherwise couldn’t.[mg]"
         # [mg]Make Vaclav replace Straka. (replace VMS card with title 2)
+        self.wait_until(19, 23, 880)
+        self.prepare_link("VMS", "Bridge_Jump")
+        self.unprepare_link("Vaclav", "Bridge_Jump")
+        self.nodes.remove("Vaclav")
+        # self.set_icon("VMS", "2.0")
+        vms = self.g.cards["VMS"]
+        # vms.show_img(vms.get_current_icon())
+        old_link = self.g.links[("Vaclav", "Bridge_Jump")]
+        self.calculate_layout()
+        vaclav = self.remove_card("Vaclav")
+        vaclav.name = "VMS"
+        bridge_jump = self.g.cards["Bridge_Jump"]
+        vaclav.set_z_index(10)
+        bridge_jump_index = bridge_jump.z_index
+        bridge_jump.set_z_index(8)
+        self.g.cards["MacInnes"].set_z_index(8)
+
+        vms_copy = vms.copy().move_to(vaclav.get_center()).set_z_index(15)
+        vms_copy.set_opacity(0)
+        new_link = self.g.add_link(
+            "VMS",
+            "Bridge_Jump",
+            spline_data=self.layouts[-1][1][("VMS", "Bridge_Jump")],
+        ).set_opacity(0)
+
+        self.play(
+            self.camera.frame.animate.move_to(vaclav.get_center()).scale_to_fit_width(
+                4
+            ),
+        )
+        d0 = vms.get_center() - vaclav.get_center()
+
+        def t_func(p1, p2):
+            return 1 - np.dot(p2.get_center() - p1.get_center(), d0) / np.dot(d0, d0)
+
+        t_updater = lambda f: f.move_to(vaclav.get_center()).scale_to_fit_width(
+            4 + 8 * t_func(vaclav, vms)
+        )
+        # print(dist)
+        self.camera.frame.add_updater(t_updater)
+        vms_img = vms_copy.get_image("2.0")
+        self.play(
+            self.animate_update_layout(),
+            # vaclav.animate.show_img("2.0"),
+            # self.add_link("VMS", "Bridge_Jump"),
+            vaclav.animate.move_to(self.current_pos("VMS")),
+            # vms_img.animate.move_to(self.current_pos("VMS")).set_opacity(1),
+            old_link.animate.become(new_link).set_opacity(1),
+            rate_functions=lingering,
+            run_time=6,
+        )
+        self.set_icon("VMS", "2.0")
+        vms.show_img(vms.get_current_icon())
+        self.camera.frame.remove_updater(t_updater)
+        self.play(FadeOut(vaclav), self.frame_cards("VMS", margin=3))
 
         # "were at the Calais massacre, and Chapter 3 of SoT suggests that Vaclav himself could have been[mh]"
         # [mh]Show connection between V and Mas

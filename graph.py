@@ -239,16 +239,25 @@ class CardGraph(Group):
 
     @override_animate(add_link)
     def _add_link_animate(
-        self, name1, name2, spline_data=None, other_end=False, anim_args=None
+        self,
+        name1,
+        name2,
+        spline_data=None,
+        other_end=False,
+        from_point=None,
+        anim_args=None,
     ):
         if anim_args is None:
             anim_args = {}
 
         edge = self.add_link(name1, name2, spline_data=spline_data)
 
-        return GrowFromPoint(
-            edge, edge.get_end() if other_end else edge.get_start(), **anim_args
-        )
+        grow_point = edge.get_start()
+        if from_point is not None:
+            grow_point = from_point
+        elif other_end:
+            grow_point = edge.get_end()
+        return GrowFromPoint(edge, grow_point, **anim_args)
 
     @override_animate(add_card)
     def _add_card_animate(self, card, pos=None, start_zoomed=False, anim_args=None):
@@ -296,10 +305,9 @@ class CardGraph(Group):
             GrowFromPoint(link, start, **anim_args),
         )
 
-    def calculate_layout(links, additional_cards=[], prev_pos=None):
+    def calculate_layout(links, additional_cards=[], prev_pos=None, seed=2, esep=0.25):
         def add_node(G, name):
             if prev_pos is not None and name in prev_pos:
-                pos = prev_pos[name]
                 G.add_node(name, pos=f"{pos[0]},{pos[1]}")
             else:
                 G.add_node(name)
@@ -321,7 +329,7 @@ class CardGraph(Group):
                 add_node(G, c)
 
         scale_factor = 0.01
-        args = f"-Nshape=box -start=2 -Nwidth={1.6} -Nheight={0.9} -Goverlap=false -Gesep=0.25 -Gsplines=true"
+        args = f"-Nshape=box -start={seed} -Nwidth={1.6} -Nheight={0.9} -Goverlap=false -Gesep={esep} -Gsplines=true"
 
         G.layout(
             prog="neato",
@@ -357,6 +365,7 @@ class CardGraph(Group):
         return card_pos, spline_data
 
     def change_layout(self, new_card_positions, new_spline_data):
+
         for name, card in self.cards.items():
             # try:
             if name in new_card_positions:
@@ -432,12 +441,20 @@ class CardGraph(Group):
             #         f"Spline data for link ({name1}, {name2}), not found in new_spline_data"
             #     )
 
+        self.card_positions = new_card_positions
         self.spline_data = new_spline_data
         return AnimationGroup(anims)
+
+    def remove_card(self, name):
+        if name in self.cards:
+            return self.cards.pop(name)
+        return None
 
     def remove_link(self, name1, name2):
         if (name1, name2) in self.links:
             return self.links.pop((name1, name2))
+        elif (name2, name1) in self.links:
+            return self.links.pop((name2, name1))
         return None
 
     @override_animate(remove_link)
@@ -446,7 +463,7 @@ class CardGraph(Group):
             anim_args = {}
         removed = self.remove_link(name1, name2)
         if removed is not None:
-            return (
+            return AnimationGroup(
                 removed.animate.move_to(self.card_positions[name1])
                 .scale(0)
                 .set_opacity(0)
@@ -487,326 +504,3 @@ class CardGraph(Group):
 
 
 MODERN_DAY_CARDS = ["Jen", "Eric", "Moody", "Ilsa", "Desjardins", "Serin", "Caldeira"]
-
-
-class NullAnim(Animation):
-    def __init__(
-        self,
-        mobject,
-        **kwargs,
-    ):
-        super().__init__(
-            mobject,
-            **kwargs,
-        )
-
-
-NULL_ANIM = NullAnim(Dot())
-
-
-class CardGraphScene(MovingCameraScene):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.camera.background_color = "#F1E9D2"
-        self.nodes = []
-        self.edges = []
-        self.not_added = []
-        self.layouts = []
-        self.ovals = []
-        self.crosses = {}
-        self.g = CardGraph()
-        self.skip_animations = True
-        self.time_s = 0
-
-    def prepare_card(self, name, add=True):
-        if name not in self.nodes:
-            self.nodes.append(name)
-
-    def prepare_link(self, name1, name2, not_added=False):
-        self.prepare_card(name1)
-        self.prepare_card(name2)
-        if (name1, name2) not in self.edges:
-            self.edges.append((name1, name2))
-
-        # For skipping animations
-        if not_added:
-            self.not_added.append((name1, name2))
-
-    def remove_card(self, name):
-        if name in self.nodes:
-            self.nodes.remove(name)
-            # Remove all edges connected to this node
-            self.edges = [e for e in self.edges if name not in e]
-
-    def unprepare_link(self, name1, name2):
-        if (name1, name2) in self.edges:
-            self.edges.remove((name1, name2))
-        elif (name2, name1) in self.edges:
-            self.edges.remove((name2, name1))
-
-    def add_card(self, name, start_zoomed=False):
-        if self.skip_animations:
-            self.g.add_card(name, start_zoomed=start_zoomed)
-            self.add(self.g.cards[name])
-            return NULL_ANIM
-        return self.g.animate.add_card(name, start_zoomed=start_zoomed)
-
-    def add_card_from(self, name1, name2, start_zoomed=False):
-        if self.skip_animations:
-            self.g.add_card_from(name1, name2, start_zoomed=start_zoomed)
-            return NULL_ANIM
-        return self.g.animate.add_card_from(name1, name2, start_zoomed=start_zoomed)
-
-    def add_link(self, name1, name2, other_end=False):
-        if self.skip_animations:
-            self.g.add_link(name1, name2)
-            self.add(self.g.links[name1, name2])
-            return NULL_ANIM
-
-        return self.g.animate.add_link(name1, name2, other_end=other_end)
-
-    def remove_link(self, name1, name2):
-        self.unprepare_link(name1, name2)
-        if self.skip_animations:
-            removed = self.g.remove_link(name1, name)
-            self.remove(removed)
-            return NULL_ANIM
-
-        self.remove(self.g.links[name1, name2])
-        ret = self.g.animate.remove_link(name1, name2)
-        return ret
-
-    def calculate_layout(self, prev=True):
-
-        prev_pos = self.layouts[-1] if len(self.layouts) > 0 and prev else None
-
-        self.layouts.append(
-            CardGraph.calculate_layout(
-                self.edges, additional_cards=self.nodes, prev_pos=prev_pos
-            )
-        )
-
-    def update_layout(self):
-        self.g.change_layout(*self.layouts[-1])
-
-    def animate_update_layout(self):
-        if self.skip_animations:
-            self.g.change_layout(*self.layouts[-1])
-            return NULL_ANIM
-
-        return self.g.animate.change_layout(*self.layouts[-1])
-
-    def current_pos(self, name):
-        return self.layouts[-1][0][name]
-
-    def bounding_box(self, *names):
-        if len(names) == 0:
-            names = self.nodes
-        points = []
-        for n in names:
-            points.append(self.layouts[-1][0][n])
-
-        arr = np.array(points)
-        # Adjust for the fact that these are the center points of boxes of size 1.6 x 0.9
-        half_width = 1.6 / 2
-        half_height = 0.9 / 2
-        min_x = (arr[:, 0] - half_width).min()
-        max_x = (arr[:, 0] + half_width).max()
-        min_y = (arr[:, 1] - half_height).min()
-        max_y = (arr[:, 1] + half_height).max()
-        width = max_x - min_x
-        height = max_y - min_y
-        center = np.array([(min_x + max_x) / 2, (min_y + max_y) / 2, 0])
-        rect = Rectangle(width=width, height=height).move_to(center)
-        return rect
-
-    def fully_zoom_card(self, name):
-        if self.skip_animations:
-            return NULL_ANIM
-
-        return AnimationGroup(
-            self.camera.frame.animate.scale_to_fit_width(1.58).move_to(
-                self.current_pos(name)
-            ),
-            self.g.animate.update_card_icons(1.58),
-        )
-
-    def zoom_card(self, name, width=2):
-        if self.skip_animations:
-            return NULL_ANIM
-        card = self.g.cards[name]
-        return AnimationGroup(
-            self.camera.frame.animate.scale_to_fit_width(width).move_to(
-                card.get_center()
-            ),
-            self.g.animate.update_card_icons(1.58),
-        )
-
-    def circle_card(self, name):
-        if self.skip_animations:
-            return NULL_ANIM
-        card = self.g.cards[name]
-        oval = DashedVMobject(
-            Ellipse(
-                width=card.width + 0.2,
-                height=card.height + 0.2,
-                color=PURE_RED,
-                stroke_width=LINK_WIDTH,
-                z_index=1,
-            )
-        ).move_to(card.get_center())
-        self.ovals.append(oval)
-        return Create(oval)
-
-    def clear_circles(self):
-        if self.skip_animations:
-            return NULL_ANIM
-        anims = []
-        while len(self.ovals) > 0:
-            o = self.ovals.pop()
-            anims.append(FadeOut(o))
-        return AnimationGroup(*anims)
-
-    def frame_cards(self, *cards, margin=0.5, no_update=False):
-        if self.skip_animations:
-            return NULL_ANIM
-        box = self.bounding_box(*cards)
-        return AnimationGroup(
-            self.camera.auto_zoom(box, margin=margin),
-            *(
-                []
-                if no_update
-                else [
-                    self.g.animate.update_card_icons(
-                        box.width + margin,
-                    )
-                ]
-            ),
-        )
-
-    def highlight_link(self, name1, name2, color=PURE_RED):
-        if self.skip_animations:
-            return NULL_ANIM
-        return (
-            self.g.links[(name1, name2)].animate.set_stroke_width(12).set_color(color)
-        )
-
-    def unhighlight_link(self, name1, name2):
-        if self.skip_animations:
-            return NULL_ANIM
-        return (
-            self.g.links[(name1, name2)]
-            .animate.set_stroke_width(LINK_WIDTH)
-            .set_color(LINK_COLOR),
-        )
-
-    def highlight_card(self, name, color=PURE_RED):
-        if self.skip_animations:
-            return NULL_ANIM
-        return self.g.cards[name].rect.animate.set_stroke(width=12, color=color)
-
-    def unhighlight_card(self, name):
-        if self.skip_animations:
-            return NULL_ANIM
-        return self.g.cards[name].rect.animate.set_stroke(
-            width=LINK_WIDTH, color=LINK_COLOR
-        )
-
-    def cross_card(self, name):
-        if self.skip_animations:
-            return NULL_ANIM
-
-        self.crosses[name] = (
-            Text(
-                "×",
-                color=PURE_RED,
-                font="Helvetica",
-                font_size=200,
-                z_index=1,
-            )
-            .set_opacity(0.5)
-            .move_to(self.current_pos(name))
-            .scale_to_fit_width(self.g.cards[name].width)
-        )
-
-        self.add(self.crosses[name])
-        return GrowFromCenter(self.crosses[name])
-
-    def uncross_card(self, name):
-        if self.skip_animations:
-            return NULL_ANIM
-
-        return self.crosses[name].animate.set_opacity(0)
-
-    def pan_to(self, name):
-        if self.skip_animations:
-            return NULL_ANIM
-        return self.camera.frame.animate.move_to(self.current_pos(name))
-
-    def opacity_except(self, *names, edges=None, opacity=0.2):
-        if self.skip_animations:
-            return NULL_ANIM
-        anims = []
-
-        if edges is None:
-            anims += [
-                l.animate.set_stroke(opacity=opacity)
-                for (n, l) in self.g.links.items()
-                if n[0] not in names or n[1] not in names
-            ]
-        else:
-            anims += [
-                l.animate.set_stroke(opacity=opacity)
-                for (n, l) in self.g.links.items()
-                if n not in edges
-            ]
-
-        anims += [
-            c.animate.set_opacity(opacity)
-            for (n, c) in self.g.cards.items()
-            if n not in names
-        ]
-
-        return AnimationGroup(*anims)
-
-    def starth(self):
-        self.skip_animations = False
-        self.next_section(skip_animations=False)
-
-    def endh(self):
-        self.skip_animations = True
-        self.next_section(skip_animations=True)
-
-    def change_slide(self, name, key):
-        self.g.cards[name].current_slide = key
-        return self.g.cards[name].animate.show_img(key, lag_ratio=0.3)
-
-    def set_slide(self, name, key):
-        self.g.cards[name].current_slide = key
-
-    def set_icon(self, name, key):
-        self.g.cards[name].current_icon = key
-
-    def wait_until(self, min, sec, cent):
-        if self.skip_animations:
-            return
-        # self.wait(0.1)
-        # return
-        until_sec = min * 60 + sec + 0.001 * cent
-        if until_sec > self.time:
-            wait_time = until_sec - self.time
-            self.play(Wait(frozen_frame=True), run_time=wait_time)
-        else:
-            print(f"No time to wait! ({min}:{sec}.{cent})")
-
-    def play(self, *args, run_time=1.5, **kwargs):
-        # self.time += run_time
-        for a in args:
-            if isinstance(a, NullAnim):
-                return
-
-        super().play(*args, run_time=run_time, **kwargs)
-
-    def wait(self, duration, *args, **kwargs):
-        # self.time += duration
-        super().wait(duration, *args, **kwargs)

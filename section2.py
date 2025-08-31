@@ -1,5 +1,6 @@
 from manim import *
 from graph import *
+from card_scene import *
 
 
 class Section2(CardGraphScene):
