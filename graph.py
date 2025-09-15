@@ -1,11 +1,14 @@
 from manim import *
+import warnings
+
+warnings.simplefilter("error", RuntimeWarning)
 import pygraphviz
 
 import sys
 
 LINK_COLOR = DARK_BROWN
 LINK_WIDTH = 7
-IMG_FOLDER = "img_low_q"
+IMG_FOLDER = "img_med_q"
 
 FILE_KEYS = {}
 with open("slide_keys.txt", "r") as f:
@@ -329,13 +332,30 @@ class CardGraph(Group):
                 add_node(G, c)
 
         scale_factor = 0.01
-        args = f"-Nshape=box -start={seed} -Nwidth={1.6} -Nheight={0.9} -Goverlap=false -Gesep={esep} -Gsplines=true"
 
-        G.layout(
-            prog="neato",
-            args=args,
-        )
-        print(args)
+        success = False
+
+        while not success:
+            try:
+                args = f"-Nshape=box -start={seed} -Nwidth={1.6} -Nheight={0.9} -Goverlap=false -Gesep={esep} -Gsplines=true"
+
+                G.layout(
+                    prog="neato",
+                    args=args,
+                )
+            except RuntimeWarning:
+                esep -= 0.01
+                esep = round(esep, 2)
+                success = False
+
+                # print("Failed with ", args, "retrying ")
+                if esep < 0:
+                    raise
+                continue
+            print("calculate_layout with args: ", args)
+            success = True
+
+        # print(args)
 
         card_pos = {}
         for c in cards:
@@ -390,11 +410,15 @@ class CardGraph(Group):
                 )
                 edge.become(new_edge)
             else:
+
+                raise Exception(f"Missing spline data for ({name1}, {name2})")
                 print(f"Missing spline data for ({name1}, {name2})")
+                pass
             # except KeyError:
             #     raise Exception(
             #         f"Spline data for link ({name1}, {name2}), not found in new_spline_data"
             #     )
+        self.old_card_positions = self.card_positions
         self.card_positions = new_card_positions
         self.spline_data = new_spline_data
 
@@ -435,7 +459,8 @@ class CardGraph(Group):
                     edge.animate.become(new_edge, **anim_args),
                 )
             else:
-                print(f"Missing spline data for ({name1}, {name2})")
+                pass
+                # print(f"Missing spline data for ({name1}, {name2})")
             # except KeyError:
             #     raise Exception(
             #         f"Spline data for link ({name1}, {name2}), not found in new_spline_data"
@@ -455,18 +480,20 @@ class CardGraph(Group):
             return self.links.pop((name1, name2))
         elif (name2, name1) in self.links:
             return self.links.pop((name2, name1))
-        return None
+        raise Exception(
+            f"Trying to remove link {(name1, name2)} that is not in the graph."
+        )
 
     @override_animate(remove_link)
-    def _animate_remove_link(self, name1, name2, anim_args=None):
+    def _animate_remove_link(self, name1, name2, to_point=None, anim_args=None):
         if anim_args is None:
             anim_args = {}
         removed = self.remove_link(name1, name2)
         if removed is not None:
+            if to_point is None:
+                to_point = self.card_positions[name1]
             return AnimationGroup(
-                removed.animate.move_to(self.card_positions[name1])
-                .scale(0)
-                .set_opacity(0)
+                removed.animate.move_to(to_point).scale(0).set_opacity(0)
             )
         return AnimationGroup(*[])
 
