@@ -1,14 +1,13 @@
-from manim import *
+import manim as mm
+from typing import cast, Any
 import warnings
 
 warnings.simplefilter("error", RuntimeWarning)
 import pygraphviz
 
-import sys
-
-LINK_COLOR = DARK_BROWN
+LINK_COLOR = mm.DARK_BROWN
 LINK_WIDTH = 7
-IMG_FOLDER = "img_med_q"
+IMG_FOLDER = "img"
 
 FILE_KEYS = {}
 with open("slide_keys.txt", "r") as f:
@@ -21,45 +20,36 @@ with open("slide_keys.txt", "r") as f:
         FILE_KEYS[name][val] = f"Slide{i + 1}"
 
 
-class CardContents(Group):
+class CardContents(mm.Group):
 
     def __init__(self, name, start_zoomed=False, *args, **kwargs):
         super().__init__(*args, **kwargs, z_index=-1)
 
         self.rect = PlaceHolderRectangle(z_index=-1)
-        self.imgs_enabled = True
         self.imgs = {}
         self.name = name
-        if self.imgs_enabled:
-            self.current_icon = "1.0"
-            icon = self.get_image(self.current_icon)
+        self.current_icon = "1.0"
+        icon = self.get_image(self.current_icon)
 
-            self.current_slide = "1.1"
-            slide = self.get_image(self.current_slide)
+        self.current_slide = "1.1"
+        slide = self.get_image(self.current_slide)
 
-            if start_zoomed:
-                self.currently_showing = self.get_current_slide()
-                slide.set_opacity(1)
-            else:
-                self.currently_showing = self.get_current_icon()
-                icon.set_opacity(1)
-
-            self.add(self.rect)
-            self.add(icon)
-            self.add(slide)
+        if start_zoomed:
+            self.currently_showing = self.get_current_slide()
+            slide.set_opacity(1)
         else:
-            self.text = Text(name, color=BLACK)
-            if self.text.width >= self.rect.width * 0.8:
-                self.text.scale_to_fit_width(self.rect.width * 0.8)
+            self.currently_showing = self.get_current_icon()
+            icon.set_opacity(1)
 
-            self.add(self.rect)
-            self.add(self.text)
+        self.add(self.rect)
+        self.add(icon)
+        self.add(slide)
 
     def get_image(self, key):
         if key in self.imgs:
             return self.imgs[key]
 
-        img = ImageMobject(
+        img = mm.ImageMobject(
             f"./{IMG_FOLDER}/{FILE_KEYS[self.name][key]}.png",
             z_index=0,
         ).set_opacity(0)
@@ -71,7 +61,7 @@ class CardContents(Group):
         return img
 
     def show_img(self, key):
-        if self.imgs_enabled and key != self.currently_showing:
+        if key != self.currently_showing:
             current = self.get_image(self.currently_showing)
             img = self.get_image(key)
             current.set_opacity(0)
@@ -80,12 +70,9 @@ class CardContents(Group):
 
     def set_opacity(self, value):
         self.rect.set_opacity(value)
-        if self.imgs_enabled:
-            self.imgs[self.currently_showing].set_opacity(value)
-        else:
-            self.text.set(opacity=value)
+        self.imgs[self.currently_showing].set_opacity(value)
 
-    @override_animate(set_opacity)
+    @mm.override_animate(set_opacity)
     def _animate_set_opacity(self, value, anim_args=None):
         if anim_args is None:
             anim_args = {}
@@ -94,31 +81,30 @@ class CardContents(Group):
 
         anims.append(self.rect.animate.set_opacity(value))
         # print(self.name, " setting opacity to ", value)
-        if self.imgs_enabled:
-            anims.append(self.imgs[self.currently_showing].animate.set_opacity(value))
-        else:
-            anims.append(self.text.animate.set(opacity=value))
-        return AnimationGroup(*anims)
+        anims.append(self.imgs[self.currently_showing].animate.set_opacity(value))
+        return mm.AnimationGroup(*anims)
 
-    @override_animate(show_img)
+    @mm.override_animate(show_img)
     def _animate_show_img(self, key, lag_ratio=None, anim_args=None):
         if anim_args is None:
             anim_args = {}
 
-        if self.imgs_enabled and key != self.currently_showing:
+        if key != self.currently_showing:
             current_img = self.get_visible()
             new_img = self.get_image(key)
             self.add(new_img)
+            fade_out_old = cast(mm.AnimationGroup, new_img.animate.set_opacity(1))
+            fade_in_new = cast(mm.AnimationGroup, current_img.animate.set_opacity(0))
             if lag_ratio is not None:
-                anim = AnimationGroup(
-                    new_img.animate.set_opacity(1),
-                    current_img.animate.set_opacity(0),
+                anim = mm.AnimationGroup(
+                    fade_out_old,
+                    fade_in_new,
                     lag_ratio=0.3,
                 )
             else:
-                anim = AnimationGroup(
-                    new_img.animate.set_opacity(1),
-                    current_img.animate.set_opacity(0),
+                anim = mm.AnimationGroup(
+                    fade_out_old,
+                    fade_in_new,
                 )
 
             self.currently_showing = key
@@ -127,28 +113,19 @@ class CardContents(Group):
             return None
 
     def get_visible(self):
-        if self.imgs_enabled:
-            return self.get_image(self.currently_showing)
-        else:
-            return None
+        return self.get_image(self.currently_showing)
 
     def get_current_icon(self):
-        if self.imgs_enabled:
-            return self.current_icon
-        else:
-            return None
+        return self.current_icon
 
     def get_current_slide(self):
-        if self.imgs_enabled:
-            return self.current_slide
-        else:
-            return None
+        return self.current_slide
 
 
-class PlaceHolderRectangle(Rectangle):
+class PlaceHolderRectangle(mm.Rectangle):
     def __init__(self, *args, **kwargs):
         super().__init__(
-            fill_color=WHITE,
+            fill_color=mm.WHITE,
             stroke_width=LINK_WIDTH / 2,
             stroke_color=LINK_COLOR,
             fill_opacity=1,
@@ -159,14 +136,14 @@ class PlaceHolderRectangle(Rectangle):
         )
 
 
-class SplineEdge(VMobject):
+class SplineEdge(mm.VMobject):
     def __init__(
         self,
         control_points,
         stroke_color=LINK_COLOR,
         stroke_width=7,
         z_index=-2,
-        cap_style=CapStyleType.ROUND,
+        cap_style=mm.CapStyleType.ROUND,
         **kwargs,
     ):
 
@@ -185,7 +162,7 @@ class SplineEdge(VMobject):
             )
 
 
-class CardGraph(Group):
+class CardGraph(mm.Group):
     def __init__(self):
         super().__init__()
         self.cards = {}
@@ -240,7 +217,7 @@ class CardGraph(Group):
             # self.add(self.cards[name])
         return self.cards[name]
 
-    @override_animate(add_link)
+    @mm.override_animate(add_link)
     def _add_link_animate(
         self,
         name1,
@@ -260,14 +237,14 @@ class CardGraph(Group):
             grow_point = from_point
         elif other_end:
             grow_point = edge.get_end()
-        return GrowFromPoint(edge, grow_point, **anim_args)
+        return mm.GrowFromPoint(edge, grow_point, **anim_args)
 
-    @override_animate(add_card)
+    @mm.override_animate(add_card)
     def _add_card_animate(self, card, pos=None, start_zoomed=False, anim_args=None):
         if anim_args is None:
             anim_args = {}
         card = self.add_card(card, pos=pos, start_zoomed=start_zoomed)
-        return GrowFromCenter(card, **anim_args)
+        return mm.GrowFromCenter(card, **anim_args)
 
     def add_card_from(
         self,
@@ -282,7 +259,7 @@ class CardGraph(Group):
 
         return card, link
 
-    @override_animate(add_card_from)
+    @mm.override_animate(add_card_from)
     def _add_card_from(
         self,
         from_name,
@@ -303,15 +280,18 @@ class CardGraph(Group):
         )
         start = link.get_start()
         # return AnimationGroup(
-        return AnimationGroup(
-            GrowFromPoint(card, start, **anim_args),
-            GrowFromPoint(link, start, **anim_args),
+        return mm.AnimationGroup(
+            mm.GrowFromPoint(card, start, **anim_args),
+            mm.GrowFromPoint(link, start, **anim_args),
         )
 
-    def calculate_layout(links, additional_cards=[], prev_pos=None, seed=2, esep=0.25):
+    @classmethod
+    def calculate_layout(
+        cls, links, additional_cards=[], prev_pos=None, seed=2, esep=0.25
+    ):
         def add_node(G, name):
             if prev_pos is not None and name in prev_pos:
-                G.add_node(name, pos=f"{pos[0]},{pos[1]}")
+                G.add_node(name, pos=f"{prev_pos[0]},{prev_pos[1]}")
             else:
                 G.add_node(name)
 
@@ -330,8 +310,6 @@ class CardGraph(Group):
             if c not in cards:
                 cards.append(c)
                 add_node(G, c)
-
-        scale_factor = 0.01
 
         success = False
 
@@ -359,7 +337,7 @@ class CardGraph(Group):
 
         card_pos = {}
         for c in cards:
-            node = pygraphviz.Node(G, c)
+            node: Any = pygraphviz.Node(G, c)
             try:
                 xs = node.attr["pos"].split(",")
                 # 72 points per inch according to graphviz documentation
@@ -370,7 +348,7 @@ class CardGraph(Group):
 
         spline_data = {}
         for l in links:
-            edge = pygraphviz.Edge(G, l[0], l[1])
+            edge: Any = pygraphviz.Edge(G, l[0], l[1])
             try:
                 ps = edge.attr["pos"].split(" ")
                 spline_data[l] = []
@@ -412,17 +390,12 @@ class CardGraph(Group):
             else:
 
                 raise Exception(f"Missing spline data for ({name1}, {name2})")
-                print(f"Missing spline data for ({name1}, {name2})")
-                pass
-            # except KeyError:
-            #     raise Exception(
-            #         f"Spline data for link ({name1}, {name2}), not found in new_spline_data"
-            #     )
+
         self.old_card_positions = self.card_positions
         self.card_positions = new_card_positions
         self.spline_data = new_spline_data
 
-    @override_animate(change_layout)
+    @mm.override_animate(change_layout)
     def _animate_change_layout(
         self, new_card_positions, new_spline_data, anim_args=None
     ):
@@ -468,14 +441,14 @@ class CardGraph(Group):
 
         self.card_positions = new_card_positions
         self.spline_data = new_spline_data
-        return AnimationGroup(anims)
+        return mm.AnimationGroup(anims)
 
     def remove_card(self, name):
         if name in self.cards:
             return self.cards.pop(name)
         return None
 
-    def remove_link(self, name1, name2):
+    def remove_link(self, name1, name2, to_point=None):
         if (name1, name2) in self.links:
             return self.links.pop((name1, name2))
         elif (name2, name1) in self.links:
@@ -484,7 +457,7 @@ class CardGraph(Group):
             f"Trying to remove link {(name1, name2)} that is not in the graph."
         )
 
-    @override_animate(remove_link)
+    @mm.override_animate(remove_link)
     def _animate_remove_link(self, name1, name2, to_point=None, anim_args=None):
         if anim_args is None:
             anim_args = {}
@@ -492,16 +465,16 @@ class CardGraph(Group):
         if removed is not None:
             if to_point is None:
                 to_point = self.card_positions[name1]
-            return AnimationGroup(
+            return mm.AnimationGroup(
                 removed.animate.move_to(to_point).scale(0).set_opacity(0)
             )
-        return AnimationGroup(*[])
+        return mm.AnimationGroup(*[])
 
     def get_graph_as_group(self):
-        return Group(*list(self.cards.values()), *list(self.links.values()))
+        return mm.Group(*list(self.cards.values()), *list(self.links.values()))
 
     def get_cards_as_group(self, *names):
-        return Group(*[self.cards[n] for n in names])
+        return mm.Group(*[self.cards[n] for n in names])
 
     def get_graph_as_list(self):
         return list(self.cards.values()) + list(self.links.values())
@@ -513,7 +486,7 @@ class CardGraph(Group):
             else:
                 c.show_img(c.get_current_icon())
 
-    @override_animate(update_card_icons)
+    @mm.override_animate(update_card_icons)
     def _animate_update_card_icons(self, frame_width, anim_args=None):
         if anim_args is None:
             anim_args = {}
@@ -527,7 +500,7 @@ class CardGraph(Group):
 
         if len(anims) == 0:
             return self.animate.scale(1)
-        return AnimationGroup(*anims)
+        return mm.AnimationGroup(*anims)
 
 
 MODERN_DAY_CARDS = ["Jen", "Eric", "Moody", "Ilsa", "Desjardins", "Serin", "Caldeira"]

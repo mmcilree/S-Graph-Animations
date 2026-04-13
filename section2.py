@@ -1,8 +1,9 @@
-from manim import *
-from graph import *
-from card_scene import *
+import manim as mm
+from typing import cast
+from card_scene import CardGraphScene
 
 
+# Section 2 = 283 animations at last render
 class Section2(CardGraphScene):
     def sequence1(self):
         # Create and zoom fully on Jen
@@ -13,7 +14,6 @@ class Section2(CardGraphScene):
 
         self.wait_until(2, 20, 520)
 
-        # self.start_HERE()
         # Create "Thomas"=Eric, link to Jen, zoom fully on "Thomas"
         self.play(self.frame_cards("Jen", "Eric"))
         self.play(self.add_link("Jen", "Eric"), self.add_card("Eric"))
@@ -180,9 +180,9 @@ class Section2(CardGraphScene):
         self.wait_until(10, 3, 0)
         # Create Sobreiro (emerge from artefacts) and fully zoom in on
         self.play(
-            LaggedStart(
+            mm.LaggedStart(
                 self.frame_cards("Artefacts", "Sobreiro"),
-                self.add_card_from("Artefacts", "Sobreiro"),
+                cast(mm.Animation, self.add_card_from("Artefacts", "Sobreiro")),
                 lag_ratio=0.5,
             )
         )
@@ -243,7 +243,7 @@ class Section2(CardGraphScene):
         # Zoom on Jen and Eric, highlight link
         self.play(
             self.frame_cards("Jen", "Eric"),
-            self.highlight_link("Jen", "Eric", color=BLUE_E),
+            self.highlight_link("Jen", "Eric", color=mm.BLUE_E),
         )
 
         self.wait_until(12, 58, 500)
@@ -366,7 +366,7 @@ class Section2(CardGraphScene):
         # Pan to Eric, add golden outline or green tick over card
         self.play(self.pan_to("Eric"))
         self.play(
-            Circumscribe(self.g.cards["Eric"], color=YELLOW_D, stroke_width=8),
+            mm.Circumscribe(self.g.cards["Eric"], color=mm.YELLOW_D, stroke_width=8),
             run_time=1.5,
         )
 
@@ -461,8 +461,8 @@ class Section2(CardGraphScene):
                 "Caldeira",
                 edges=[("Jen", "Eric"), ("VMS", "Caldeira")],
             ),
-            self.highlight_link("Jen", "Eric", color=BLUE_E),
-            self.highlight_link("VMS", "Caldeira", color=PURE_RED),
+            self.highlight_link("Jen", "Eric", color=mm.BLUE_E),
+            self.highlight_link("VMS", "Caldeira", color=mm.PURE_RED),
         )
 
         # Zoom fully on Eric
@@ -626,16 +626,16 @@ class Section2(CardGraphScene):
 
         # Show Eric and Ilsa and highlight link in green
         self.play(
-            LaggedStart(
+            mm.LaggedStart(
                 self.frame_cards("Eric", "Ilsa", "Moody"),
-                self.highlight_link("Eric", "Ilsa", color=GREEN_E),
+                self.highlight_link("Eric", "Ilsa", color=mm.GREEN_E),
                 lag_ratio=0.5,
             ),
             self.g.cards["Ilsa"].animate.scale(1),
         )
 
         # Highlight Moody/Eric link in red
-        self.play(self.highlight_link("Eric", "Moody", color=PURE_RED))
+        self.play(self.highlight_link("Eric", "Moody", color=mm.PURE_RED))
 
         self.set_slide("Moody", "1.3")
         self.wait_until(28, 21, 900)
@@ -651,7 +651,7 @@ class Section2(CardGraphScene):
         )
         self.wait_until(28, 40, 0)
 
-        self.play(self.fully_zoom_card("Sum_Tape")),
+        self.play(self.fully_zoom_card("Sum_Tape"))
 
         self.wait_until(29, 1, 740)
         # Show Jen and Eric

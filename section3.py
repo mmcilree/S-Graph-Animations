@@ -1,6 +1,9 @@
-from manim import *
-from graph import *
-from card_scene import *
+import manim as mm
+import numpy as np
+
+from card_scene import CardGraphScene
+from graph import CardContents, MODERN_DAY_CARDS
+from typing import cast
 
 
 class Section3(CardGraphScene):
@@ -373,7 +376,7 @@ class Section3(CardGraphScene):
             self.wait_until(9, 34, 900)
             self.play(
                 self.clear_circles(),
-                self.highlight_link("Durand", "Ekstrom", color=BLUE_C),
+                self.highlight_link("Durand", "Ekstrom", color=mm.BLUE_C),
             )
             self.play(self.highlight_link("Ferrara", "Durand"))
 
@@ -431,7 +434,7 @@ class Section3(CardGraphScene):
 
         for e in new_edges:
             self.prepare_link(*e)
-        old_pos = {}
+
         for e in remove_edges:
             self.unprepare_link(*e)
 
@@ -440,6 +443,7 @@ class Section3(CardGraphScene):
                 "Ekstrom", "Durand", "Feuerbach", "Ferrara", "Wechsler", "Summersby"
             )
         )
+
         s_org_pos = self.current_pos("S_Org")
 
         self.calculate_layout(esep=0.06)
@@ -651,7 +655,10 @@ class Section3(CardGraphScene):
                 opacity=1,
             ),
         )
-        # For context:[lx] the first four chapters consist of an unnamed protagonist being reborn from a river, meeting a group who share names with the birds in this hotel register, and witnessing a massacre of striking workers organised by an evil factory owner.
+        # For context:[lx] the first four chapters consist of an unnamed
+        # protagonist being reborn from a river, meeting a group who share names
+        # with the birds in this hotel register, and witnessing a massacre of
+        # striking workers organised by an evil factory owner.
         self.wait_until(18, 10, 860)
         self.play(
             self.frame_cards(
@@ -659,7 +666,9 @@ class Section3(CardGraphScene):
             ),
             run_time=6,
         )
-        # [lx]Pan towards bridge jump, then over S org group, then over Calais massacre. Don't need to totally zoom in, want to get picture of how all connected.
+        # [lx]Pan towards bridge jump, then over S org group, then over Calais
+        # massacre. Don't need to totally zoom in, want to get picture of how
+        # all connected.
         self.play(self.frame_cards("Calais", margin=9), run_time=6)
 
         # "best option for Caldeira, which she herself admits to Eric[ly]"
@@ -722,11 +731,11 @@ class Section3(CardGraphScene):
         # vms.show_img(vms.get_current_icon())
         old_link = self.g.links[("Vaclav", "Bridge_Jump")]
         self.calculate_layout(esep=0.08)
-        vaclav = self.remove_card("Vaclav")
+        vaclav = cast(CardContents, self.remove_card("Vaclav"))
         vaclav.name = "VMS"
         bridge_jump = self.g.cards["Bridge_Jump"]
         vaclav.set_z_index(10)
-        bridge_jump_index = bridge_jump.z_index
+
         bridge_jump.set_z_index(8)
         self.g.cards["MacInnes"].set_z_index(8)
 
@@ -763,20 +772,20 @@ class Section3(CardGraphScene):
             # self.add_link("VMS", "Bridge_Jump"),
             vaclav.animate.move_to(self.current_pos("VMS")),
             # vms_img.animate.move_to(self.current_pos("VMS")).set_opacity(1),
-            rate_functions=lingering,
+            rate_functions=mm.lingering,
             run_time=6,
         )
         self.set_icon("VMS", "2.0")
         vms.show_img(vms.get_current_icon())
         self.camera.frame.remove_updater(t_updater)
-        self.play(FadeOut(vaclav), self.frame_cards("VMS", margin=3))
+        self.play(mm.FadeOut(vaclav), self.frame_cards("VMS", margin=3))
         self.remove(vaclav)
         # "were at the Calais massacre, and Chapter 3 of SoT suggests that Vaclav himself could have been[mh]"
         # [mh]Show connection between V and Mas
         self.wait_until(19, 37, 640)
         self.play(
             self.frame_cards("VMS", "Calais"),
-            self.highlight_link("Calais", "VMS", PURE_RED),
+            self.highlight_link("Calais", "VMS", mm.PURE_RED),
         )
 
         # "As to why Vaclav went [mj]along with all this, who knows?"
@@ -861,7 +870,7 @@ class Section3(CardGraphScene):
         self.wait_until(23, 15, 240)
         self.play(self.frame_cards("MacInnes", "Durand", "Ferrara"))
         self.play(
-            self.highlight_card("MacInnes"), self.highlight_card("Ferrara", GREEN_C)
+            self.highlight_card("MacInnes"), self.highlight_card("Ferrara", mm.GREEN_C)
         )
 
         # "not just on the past but the present too,[nl]"
@@ -916,9 +925,9 @@ class Section3(CardGraphScene):
         )
         self.play(
             self.highlight_card("VMS"),
-            *[self.highlight_card(c, color=BLUE_C) for c in ORIGINAL_S],
-            self.highlight_card("S_Org", color=BLUE_C),
-            *[self.highlight_link(c, "S_Org", color=BLUE_E) for c in ORIGINAL_S],
+            *[self.highlight_card(c, color=mm.BLUE_C) for c in ORIGINAL_S],
+            self.highlight_card("S_Org", color=mm.BLUE_C),
+            *[self.highlight_link(c, "S_Org", color=mm.BLUE_E) for c in ORIGINAL_S],
             self.unhighlight_card("MacInnes"),
         )
 
@@ -974,7 +983,7 @@ class Section3(CardGraphScene):
         self.wait_until(26, 32, 20)
         self.play(
             self.frame_cards("Wechsler", "Arp", "S_Org"),
-            self.highlight_link("Wechsler", "Feuerbach", color=BLUE_E),
+            self.highlight_link("Wechsler", "Feuerbach", color=mm.BLUE_E),
             self.highlight_link("Wechsler", "Arp"),
         )
 
@@ -1081,7 +1090,7 @@ class Section3(CardGraphScene):
         self.wait_until(30, 19, 440)
         self.play(
             self.frame_cards("Desjardins", "Eric"),
-            self.highlight_link("Desjardins", "Eric", BLUE_C),
+            self.highlight_link("Desjardins", "Eric", mm.BLUE_C),
         )
 
         # "Back to Signe though[pl]"
