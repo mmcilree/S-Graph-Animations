@@ -3,6 +3,7 @@ import numpy as np
 from typing import cast
 from graph import CardGraph, LINK_WIDTH, LINK_COLOR
 
+
 class NullAnim(mm.Animation):
     def __init__(
         self,
@@ -23,7 +24,7 @@ class CardGraphScene(mm.MovingCameraScene):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.camera.background_color = "#F1E9D2"
+        # self.camera.background_color = "#F1E9D2"
         self.nodes = []
         self.edges = []
         self.not_added = []
@@ -82,9 +83,8 @@ class CardGraphScene(mm.MovingCameraScene):
             return NULL_ANIM
 
         return self.g.animate.add_link(
-            name1, name2, other_end=other_end, from_point=from_point #type: ignore[attr-defined]
-            ) 
-
+            name1, name2, other_end=other_end, from_point=from_point  # type: ignore[attr-defined]
+        )
 
     def remove_link(self, name1, name2):
         self.unprepare_link(name1, name2)
@@ -100,7 +100,9 @@ class CardGraphScene(mm.MovingCameraScene):
         ret = self.g.animate.remove_link(
             name1,
             name2,
-            to_point=mm.midpoint(self.layouts[-1][0][name1], self.layouts[-1][0][name2]),
+            to_point=mm.midpoint(
+                self.layouts[-1][0][name1], self.layouts[-1][0][name2]
+            ),
         )
 
         return ret
@@ -160,32 +162,33 @@ class CardGraphScene(mm.MovingCameraScene):
     def fully_zoom_card(self, name):
         if self.skip_animations:
             return NULL_ANIM
-        
-        move_camera = cast(mm.Animation,
+
+        move_camera = cast(
+            mm.Animation,
             self.camera.frame.animate.scale_to_fit_width(1.58).move_to(
                 self.current_pos(name)
-            )
+            ),
         )
 
-        update_icons = cast(mm.Animation,
+        update_icons = cast(
+            mm.Animation,
             self.g.animate.update_card_icons(1.58),
         )
-        return mm.AnimationGroup(
-            move_camera, update_icons
-        )
+        return mm.AnimationGroup(move_camera, update_icons)
 
     def zoom_card(self, name, width=2):
         if self.skip_animations:
             return NULL_ANIM
         card = self.g.cards[name]
-        move_camera = cast(mm.Animation, self.camera.frame.animate.scale_to_fit_width(width).move_to(
-            card.get_center()
-        ))
+        move_camera = cast(
+            mm.Animation,
+            self.camera.frame.animate.scale_to_fit_width(width).move_to(
+                card.get_center()
+            ),
+        )
         update_icons = cast(mm.Animation, self.g.animate.update_card_icons(1.58))
 
-        return mm.AnimationGroup(
-            move_camera, update_icons
-        )
+        return mm.AnimationGroup(move_camera, update_icons)
 
     def circle_card(self, name):
         if self.skip_animations:
@@ -216,9 +219,6 @@ class CardGraphScene(mm.MovingCameraScene):
 
         oval.set_z_index(20)
         self.ovals.append(oval)
-        if self.skip_animations:
-            self.add(oval)
-            return NULL_ANIM
         return mm.Create(oval)
 
     def clear_circles(self):
@@ -240,21 +240,21 @@ class CardGraphScene(mm.MovingCameraScene):
 
         if shift is not None:
             box.shift(shift)
-        
+
         zoom_camera = cast(mm.Animation, self.camera.auto_zoom([box], margin=margin))
         update_icons = (
-                [NULL_ANIM]
-                if no_update
-                else [
-                    cast(mm.Animation, self.g.animate.update_card_icons(
+            [NULL_ANIM]
+            if no_update
+            else [
+                cast(
+                    mm.Animation,
+                    self.g.animate.update_card_icons(
                         box.width + margin,
-                    ))
-                ]
-            )
-        return mm.AnimationGroup(
-            zoom_camera,
-            *update_icons
+                    ),
+                )
+            ]
         )
+        return mm.AnimationGroup(zoom_camera, *update_icons)
 
     def highlight_link(self, name1, name2, color=mm.PURE_RED):
         if self.skip_animations:
@@ -399,15 +399,14 @@ class CardGraphScene(mm.MovingCameraScene):
         self.g.cards[name].current_icon = key
 
     def wait_until(self, min, sec, cent):
+        return
         if self.skip_animations:
             return
 
-        self.wait(0.1)
-        return
         until_sec = min * 60 + sec + 0.001 * cent
         if until_sec > self.time:
             wait_time = until_sec - self.time
-            self.play(Wait(frozen_frame=True), run_time=wait_time)
+            self.play(mm.Wait(frozen_frame=True), run_time=wait_time)
         else:
             print(f"No time to wait! ({min}:{sec}.{cent})")
 

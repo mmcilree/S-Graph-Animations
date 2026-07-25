@@ -74,8 +74,8 @@ class Section3(CardGraphScene):
         self.set_icon("Eric", "2.0")
 
     def construct(self):
-        self.starth()
-        # self.next_section(skip_animations=True)
+        # self.starth()
+        self.next_section(skip_animations=True)
         self.initialise_layout()
         self.camera.frame.move_to(self.bounding_box())
 
@@ -189,11 +189,12 @@ class Section3(CardGraphScene):
             # "She famously discovered a cave in the Dordogne containing ancient paintings"
             # Show Durand 1.2
             self.wait_until(2, 56, 970)
-            self.play(self.change_slide("Durand", "1.2"))
+            # self.play(self.change_slide("Durand", "1.2"))
 
             # "Her and Ekstrom’s character analogues"
             # Link to Ekstrom, then zoom back in on 1.2
             self.wait_until(3, 3, 780)
+            self.set_slide("Durand", "1.2")
             self.play(
                 self.frame_cards("Durand", "Ekstrom"),
                 self.add_link("Durand", "Ekstrom", other_end=True),
@@ -1148,6 +1149,7 @@ class Section3(CardGraphScene):
 
         # "We are coming to the end of this section[pu]"
         # [pu]Zoom out to show whole diagram
+        self.starth()
         self.wait_until(31, 48, 840)
         self.play(self.frame_cards(), run_time=6)
 

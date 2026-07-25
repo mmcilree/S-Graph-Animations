@@ -1,13 +1,23 @@
 import manim as mm
 from typing import cast, Any
 import warnings
+import hashlib
+import json
+import os
 
 warnings.simplefilter("error", RuntimeWarning)
 import pygraphviz
 
 LINK_COLOR = mm.DARK_BROWN
 LINK_WIDTH = 7
-IMG_FOLDER = "img"
+
+# Card artwork quality, selected by env var (default full-res). The low/med folders hold
+# the same slides at ~1.8M / 5.7M vs 74M, which dominates render time — use them while editing.
+_CARD_QUALITY = os.environ.get("CARD_QUALITY", "high").lower()
+IMG_FOLDER = {"low": "img_low_q", "med": "img_med_q", "high": "img"}.get(
+    _CARD_QUALITY, "img"
+)
+print(f"[cards] CARD_QUALITY={_CARD_QUALITY} -> IMG_FOLDER={IMG_FOLDER}")
 
 FILE_KEYS = {}
 with open("slide_keys.txt", "r") as f:
@@ -162,6 +172,76 @@ class SplineEdge(mm.VMobject):
             )
 
 
+# --- Layout cache -----------------------------------------------------------
+# neato layout is a deterministic function of (links, additional_cards, seed,
+# esep), so we memoise results to disk. A cache hit skips graphviz entirely,
+# which is the bulk of the per-run cost even when animations are skipped.
+LAYOUT_CACHE_PATH = os.path.join("local", "layout_cache.json")
+_LAYOUT_CACHE_FORMAT = 1
+_LAYOUT_CACHE = None
+
+
+def _graphviz_stamp():
+    # Cached layouts are only valid for the graphviz build that produced them.
+    return f"pygraphviz-{getattr(pygraphviz, '__version__', 'unknown')}"
+
+
+def _layout_cache_key(links, additional_cards, seed, esep):
+    # Order-sensitive: neato's result depends on node/edge insertion order.
+    payload = [[list(l) for l in links], list(additional_cards), seed, esep]
+    blob = json.dumps(payload, separators=(",", ":"))
+    return hashlib.sha1(blob.encode()).hexdigest()
+
+
+def _serialize_layout(card_pos, spline_data):
+    return {
+        "card_pos": {name: list(pos) for name, pos in card_pos.items()},
+        "spline_data": [
+            [list(edge), [list(p) for p in pts]] for edge, pts in spline_data.items()
+        ],
+    }
+
+
+def _deserialize_layout(entry):
+    card_pos = {name: tuple(pos) for name, pos in entry["card_pos"].items()}
+    spline_data = {
+        tuple(edge): [tuple(p) for p in pts] for edge, pts in entry["spline_data"]
+    }
+    return card_pos, spline_data
+
+
+def _get_layout_cache():
+    global _LAYOUT_CACHE
+    if _LAYOUT_CACHE is not None:
+        return _LAYOUT_CACHE
+    try:
+        with open(LAYOUT_CACHE_PATH) as f:
+            data = json.load(f)
+    except (FileNotFoundError, ValueError):
+        data = {}
+    if (
+        data.get("format") != _LAYOUT_CACHE_FORMAT
+        or data.get("graphviz") != _graphviz_stamp()
+    ):
+        _LAYOUT_CACHE = {}  # stale/absent: recompute from scratch
+    else:
+        _LAYOUT_CACHE = data.get("entries", {})
+    return _LAYOUT_CACHE
+
+
+def _save_layout_cache(cache):
+    os.makedirs(os.path.dirname(LAYOUT_CACHE_PATH), exist_ok=True)
+    payload = {
+        "format": _LAYOUT_CACHE_FORMAT,
+        "graphviz": _graphviz_stamp(),
+        "entries": cache,
+    }
+    tmp = LAYOUT_CACHE_PATH + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(payload, f)
+    os.replace(tmp, LAYOUT_CACHE_PATH)  # atomic
+
+
 class CardGraph(mm.Group):
     def __init__(self):
         super().__init__()
@@ -289,6 +369,12 @@ class CardGraph(mm.Group):
     def calculate_layout(
         cls, links, additional_cards=[], prev_pos=None, seed=2, esep=0.25
     ):
+        cache = _get_layout_cache()
+        cache_key = _layout_cache_key(links, additional_cards, seed, esep)
+        if cache_key in cache:
+            print("calculate_layout: cache hit")
+            return _deserialize_layout(cache[cache_key])
+
         def add_node(G, name):
             if prev_pos is not None and name in prev_pos:
                 G.add_node(name, pos=f"{prev_pos[0]},{prev_pos[1]}")
@@ -360,6 +446,9 @@ class CardGraph(mm.Group):
                 raise Exception(
                     f"Missing spline data from GraphViz for edge ({l[0]}, {l[1]})"
                 )
+
+        cache[cache_key] = _serialize_layout(card_pos, spline_data)
+        _save_layout_cache(cache)
         return card_pos, spline_data
 
     def change_layout(self, new_card_positions, new_spline_data):
@@ -391,7 +480,6 @@ class CardGraph(mm.Group):
 
                 raise Exception(f"Missing spline data for ({name1}, {name2})")
 
-        self.old_card_positions = self.card_positions
         self.card_positions = new_card_positions
         self.spline_data = new_spline_data
 
