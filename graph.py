@@ -19,6 +19,11 @@ IMG_FOLDER = {"low": "img_low_q", "med": "img_med_q", "high": "img"}.get(
 )
 print(f"[cards] CARD_QUALITY={_CARD_QUALITY} -> IMG_FOLDER={IMG_FOLDER}")
 
+# Keep only the active card image(s) as live submobjects instead of retaining every slide
+# a card has ever shown (opacity-0 leftovers were being resampled every frame). Set
+# PRUNE_IMAGES=0 to restore the old retain-everything behaviour (for A/B validation).
+_PRUNE_IMAGES = os.environ.get("PRUNE_IMAGES", "1") != "0"
+
 FILE_KEYS = {}
 with open("slide_keys.txt", "r") as f:
     for i, line in enumerate(f.read().splitlines()):
@@ -37,23 +42,23 @@ class CardContents(mm.Group):
 
         self.rect = PlaceHolderRectangle(z_index=-1)
         self.imgs = {}
+        self._load_seq = (
+            0  # first-load order, used to keep crossfade compositing stable
+        )
         self.name = name
         self.current_icon = "1.0"
-        icon = self.get_image(self.current_icon)
+        self.get_image(self.current_icon)
 
         self.current_slide = "1.1"
-        slide = self.get_image(self.current_slide)
+        self.get_image(self.current_slide)
 
         if start_zoomed:
             self.currently_showing = self.get_current_slide()
-            slide.set_opacity(1)
         else:
             self.currently_showing = self.get_current_icon()
-            icon.set_opacity(1)
 
         self.add(self.rect)
-        self.add(icon)
-        self.add(slide)
+        self._activate(self.currently_showing).set_opacity(1)
 
     def get_image(self, key):
         if key in self.imgs:
@@ -66,17 +71,48 @@ class CardContents(mm.Group):
         img.scale_to_fit_width(self.rect.width * 0.9)
 
         img.move_to(self.rect.get_center())
+        img._load_seq = self._load_seq  # stamp first-load order for stable stacking
+        self._load_seq += 1
         self.imgs[key] = img
-        self.add(img)
+        if not _PRUNE_IMAGES:
+            self.add(img)  # legacy: every loaded image stays in the group
         return img
+
+    def _activate(self, key):
+        # Ensure this image is a live submobject (add() dedupes if already present).
+        img = self.get_image(key)
+        if _PRUNE_IMAGES and img not in self.submobjects:
+            # While pruned, the image missed any card movement/scaling (moves only reach
+            # live submobjects), so re-sync it to the rect's current geometry.
+            img.scale_to_fit_width(self.rect.width * 0.9)
+            img.move_to(self.rect.get_center())
+        self.add(img)
+        if _PRUNE_IMAGES:
+            # Re-added images land at the end; restore first-load order so a crossfade's
+            # semi-transparent layers composite in the same order as legacy (order matters).
+            active = sorted(
+                (m for m in self.submobjects if m is not self.rect),
+                key=lambda m: getattr(m, "_load_seq", 0),
+            )
+            self.submobjects = [self.rect, *active]
+        return img
+
+    def _prune(self, keep):
+        # Drop images no longer needed on screen, keeping their pixels cached in self.imgs.
+        if not _PRUNE_IMAGES:
+            return
+        for k, img in self.imgs.items():
+            if k not in keep and img in self.submobjects:
+                self.remove(img)
 
     def show_img(self, key):
         if key != self.currently_showing:
             current = self.get_image(self.currently_showing)
-            img = self.get_image(key)
+            img = self._activate(key)
             current.set_opacity(0)
             img.set_opacity(1)
             self.currently_showing = key
+            self._prune({key})
 
     def set_opacity(self, value):
         self.rect.set_opacity(value)
@@ -100,9 +136,12 @@ class CardContents(mm.Group):
             anim_args = {}
 
         if key != self.currently_showing:
-            current_img = self.get_visible()
-            new_img = self.get_image(key)
-            self.add(new_img)
+            old_key = self.currently_showing
+            current_img = self.get_image(old_key)
+            new_img = self._activate(key)
+            self._prune(
+                {old_key, key}
+            )  # keep both for the crossfade; drop older leftovers
             fade_out_old = cast(mm.AnimationGroup, new_img.animate.set_opacity(1))
             fade_in_new = cast(mm.AnimationGroup, current_img.animate.set_opacity(0))
             if lag_ratio is not None:
@@ -256,6 +295,8 @@ class CardGraph(mm.Group):
         name2,
         spline_data=None,
         start_zoomed=False,
+        color=LINK_COLOR,
+        width=LINK_WIDTH,
     ):
         self.add_card(name1, start_zoomed=start_zoomed)
         self.add_card(name2, start_zoomed=start_zoomed)
@@ -263,15 +304,21 @@ class CardGraph(mm.Group):
         if (name1, name2) not in self.links:
             try:
                 self.links[(name1, name2)] = SplineEdge(
-                    self.spline_data[(name1, name2)]
+                    self.spline_data[(name1, name2)],
+                    stroke_color=color,
+                    stroke_width=width,
                 )
             except KeyError:
                 if (name2, name1) in self.spline_data:
                     self.links[(name1, name2)] = SplineEdge(
-                        self.spline_data[(name2, name1)]
+                        self.spline_data[(name2, name1)],
+                        stroke_color=color,
+                        stroke_width=width,
                     )
                 elif spline_data is not None:
-                    self.links[(name1, name2)] = SplineEdge(spline_data)
+                    self.links[(name1, name2)] = SplineEdge(
+                        spline_data, stroke_color=color, stroke_width=width
+                    )
                 else:
                     raise Exception(
                         f"Spline data for edge ({name1}, {name2}) not found in self.spline_data"
@@ -305,12 +352,16 @@ class CardGraph(mm.Group):
         spline_data=None,
         other_end=False,
         from_point=None,
+        color=LINK_COLOR,
+        width=LINK_WIDTH,
         anim_args=None,
     ):
         if anim_args is None:
             anim_args = {}
 
-        edge = self.add_link(name1, name2, spline_data=spline_data)
+        edge = self.add_link(
+            name1, name2, spline_data=spline_data, color=color, width=width
+        )
 
         grow_point = edge.get_start()
         if from_point is not None:

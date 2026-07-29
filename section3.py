@@ -700,9 +700,15 @@ class Section3(CardGraphScene):
         # "timeline: Durand and Ekstrom[me]"
         # [me]Pan to above Durand and ekstrom (but not fully in), then Vaclav
         self.wait_until(19, 9, 500)
+        self.play(
+            self.highlight_card("Durand", color=mm.BLUE_E, width=8),
+            self.highlight_card("Ekstrom", color=mm.BLUE_E, width=8),
+        )
 
         self.wait_until(19, 11, 800)
-        self.play(self.pan_to("Vaclav"))
+        self.play(
+            self.pan_to("Vaclav"), self.highlight_card("Vaclav", color=mm.GREEN_E)
+        )
 
         self.wait_until(19, 16, 700)
 
@@ -716,12 +722,22 @@ class Section3(CardGraphScene):
                 # "S_Org",
                 "Bridge_Jump",
             ),
+            self.highlight_card("Ferrara", color=mm.PURPLE_E, width=8),
+            self.highlight_card("Feuerbach", color=mm.PURPLE_E, width=8),
         )
         # "like-minded friends[mf]"
         # [mf]Circle group OR just show in pan
 
         # "use Vaclav’s anonymity to make political statements they otherwise couldn’t.[mg]"
         # [mg]Make Vaclav replace Straka. (replace VMS card with title 2)
+
+        self.wait_until(19, 22, 880)
+        self.play(
+            *[
+                self.unhighlight_card(c)
+                for c in ["Feuerbach", "Ferrara", "Ekstrom", "Durand", "Vaclav"]
+            ]
+        )
         self.wait_until(19, 23, 880)
         self.prepare_link("VMS", "Bridge_Jump")
         self.prepare_link("Singh", "S_Org")
@@ -776,19 +792,26 @@ class Section3(CardGraphScene):
             rate_functions=mm.lingering,
             run_time=6,
         )
+        # Hand off from the morphed stand-in to the canonical VMS->Bridge_Jump
+        # link: reveal new_link first, then drop old_link, so the edge never
+        # blinks out (new_link was created at opacity 0 as the become() target).
+        new_link.set_opacity(1)
+        self.add(new_link)
+        self.remove(old_link)
         self.set_icon("VMS", "2.0")
         vms.show_img(vms.get_current_icon())
         self.camera.frame.remove_updater(t_updater)
+
         self.play(mm.FadeOut(vaclav), self.frame_cards("VMS", margin=3))
         self.remove(vaclav)
         # "were at the Calais massacre, and Chapter 3 of SoT suggests that Vaclav himself could have been[mh]"
         # [mh]Show connection between V and Mas
         self.wait_until(19, 37, 640)
+
         self.play(
             self.frame_cards("VMS", "Calais"),
             self.highlight_link("Calais", "VMS", mm.PURE_RED),
         )
-
         # "As to why Vaclav went [mj]along with all this, who knows?"
         # [mj]Zoom in on VMS 2.1
         self.wait_until(19, 49, 980)
@@ -877,7 +900,6 @@ class Section3(CardGraphScene):
         # "not just on the past but the present too,[nl]"
         # [nl]Pan to present part of diagram
         self.wait_until(23, 27, 840)
-
         self.play(
             self.frame_cards("Jen", "Eric", "Moody", "Ilsa", "Caldeira", "Desjardins")
         )
@@ -889,9 +911,9 @@ class Section3(CardGraphScene):
         self.prepare_link("Summersby", "VMS")
         self.calculate_layout(esep=0.06)
         self.wait_until(23, 31, 600)
-
+        self.frame_cards()
         self.play(
-            self.frame_cards("Moody", "MacInnes", "Jen", "Eric"),
+            # self.frame_cards("Moody", "MacInnes", "Jen", "Eric"),
             self.animate_update_layout(),
             self.add_link("MacInnes", "Moody", from_point=self.layouts[-2][0]["Moody"]),
             run_time=3,
@@ -995,7 +1017,6 @@ class Section3(CardGraphScene):
         self.prepare_link("Signe", "Ekstrom")
         self.prepare_link("Summersby", "Signe")
         self.prepare_link("VMS", "Signe")
-
         self.calculate_layout()
         # "our old friend Desjardins. [om]"
         # [om]Zoom to Dejardins card 1.3
@@ -1015,7 +1036,6 @@ class Section3(CardGraphScene):
         # " woman [op]called Signe Rabe in Carcassonne in 1952."
         # [op]New Signe Rabe card emerges from Dejardins, zoom on Signe 1.1
         self.wait_until(28, 17, 980)
-
         self.play(self.frame_cards("Desjardins", "Signe"))
         self.play(
             self.add_card_from("Desjardins", "Signe"),
@@ -1149,7 +1169,6 @@ class Section3(CardGraphScene):
 
         # "We are coming to the end of this section[pu]"
         # [pu]Zoom out to show whole diagram
-        self.starth()
         self.wait_until(31, 48, 840)
         self.play(self.frame_cards(), run_time=6)
 
@@ -1168,3 +1187,393 @@ class Section3(CardGraphScene):
         # [py]Zoom out to highlight all mysterious death victims
         self.wait_until(32, 21, 400)
         self.play(self.frame_cards(*ORIGINAL_S))
+
+        # ================================================================
+        # SECTION 4 — Ship of Theseus, The Novel
+        # Card-diagram shots only. Live-action, on-screen quotes, the
+        # Caldeira-vs-Straka / key-events tables, timeline highlights and
+        # the side-by-side drawing montages are all handled elsewhere and
+        # deliberately omitted here. No time-sync: shots run back-to-back.
+        # The full diagram is already live from the end of section 3;
+        # "Vaclav" is now the VMS card (merged above).
+        # ================================================================
+        def section4():
+            # "we have to explore what Ship of Theseus tells us about its author"
+            # PLAN: Show full diagram
+            self.play(self.frame_cards())
+            self.wait(1)
+
+            # "SoT was somewhat inspired by events and people in Vaclav's real life"
+            # PLAN: Can show diagram again
+            self.play(self.frame_cards())
+            self.wait(1)
+
+            # "S's journey from nobody to the influential assassin ... the S organisation"
+            # PLAN: Show S org on diagram
+            # move from Vaclav and Caldeira to Vaclax zoom, then fade from
+            self.play(self.frame_cards("VMS", "Ekstrom", "Durand"))
+            self.wait(1)
+
+            # "the companionship and admiration S comes to feel for ... Ekstrom and Durand"
+            # PLAN: Highlight connections on diagram, then stay on Durand/Vaclav's
+            self.play(
+                self.highlight_link("S_Org", "Ekstrom", color=mm.GREEN_E),
+                self.highlight_link("S_Org", "Durand", color=mm.GREEN_E),
+                self.highlight_link("S_Org", "VMS", color=mm.GREEN_E),
+            )
+            self.wait(1)
+            self.play(
+                self.unhighlight_link("S_Org", "Ekstrom"),
+                self.highlight_link("S_Org", "Durand", color=mm.PINK),
+                self.highlight_link("S_Org", "VMS", color=mm.PINK),
+            )
+            self.wait(1)
+            self.play(
+                self.unhighlight_link("S_Org", "Ekstrom"),
+                self.unhighlight_link("S_Org", "Durand"),
+                self.unhighlight_link("S_Org", "VMS"),
+            )
+            self.wait(1)
+
+            # "it seems almost spiritual ... the ship's customs de-emphasise individualism"
+            # PLAN: Show S org in diagram, highlight
+            self.play(
+                self.frame_cards("S_Org", margin=3),
+                self.highlight_card("S_Org", color=mm.BLUE_E),
+            )
+            self.wait(1)
+            self.play(self.unhighlight_card("S_Org"))
+            self.wait(1)
+
+            # "the S has this kind of larger-scale legacy as a continuous composite organisation"
+            # PLAN: Show full diagram
+            self.play(self.frame_cards())
+            self.wait(1)
+
+            # "Vevoda starts out as a psychopathic businessman ... Hermes Bouchard"
+            # PLAN: Show Bouchard drawing
+            self.play(self.fully_zoom_card("Bouchard"))
+            self.wait(1)
+
+            # "it's implied the 'new S' is a continuation too ... still directly linked to Bouchard"
+            # PLAN: Link Mysterious men to Bouchard on diagram (or circle both)
+            self.play(
+                self.frame_cards("Myst_Men", "Bouchard"),
+            )
+            self.wait(1)
+            self.prepare_link("Myst_Men", "Bouchard")
+            self.calculate_layout()
+            self.play(self.animate_update_layout(), run_time=3)
+            self.wait(1)
+            self.play(self.add_link("Myst_Men", "Bouchard"))
+            self.wait(1)
+
+            # "Moody is the new MacInnes, selling out academic integrity for money"
+            # PLAN: Highlight Moody and MacInnes link in red on diagram
+            self.play(
+                self.frame_cards("Moody", "MacInnes"),
+                self.highlight_link("Moody", "MacInnes", color=mm.PURE_RED),
+            )
+            self.wait(1)
+            self.play(self.unhighlight_link("Moody", "MacInnes"))
+            self.wait(1)
+
+            # "Back to the characterisation of Vaclav" (the VMS card now stands in for Vaclav)
+            # PLAN: Vaclav old drawing
+            self.play(self.fully_zoom_card("VMS"))
+            self.wait(1)
+
+            # "Stenfalk's death clearly weighs on his conscience"
+            # PLAN: Add Ekstrom drawing next to Vaclav
+            self.play(self.frame_cards("VMS", "Ekstrom"))
+            self.wait(1)
+
+            # "the sheet of paper with strange anagrams ... What if Vaclav and Ekstrom were meeting"
+            # PLAN: Show Ekstrom 1.5
+            self.set_slide("Ekstrom", "1.5")
+            self.play(self.fully_zoom_card("Ekstrom"))
+            self.wait(1)
+
+            # "S also feels hugely guilty about all the subsequent people he failed to save"
+            # PLAN: Show full diagram with all relevant parties
+            self.play(self.frame_cards())
+            self.wait(1)
+
+            # "changed to Pfeifer later by Caldeira ... point blame at someone like Weschler or MacInnes"
+            # PLAN: Show Weschler and MacInnes on diagram
+            self.play(
+                self.frame_cards("Wechsler", "MacInnes"),
+                self.highlight_card("Wechsler"),
+                self.highlight_card("MacInnes"),
+            )
+            self.wait(1)
+
+            # "his depression and resignation to futility reaches a peak in the Winter City"
+            # PLAN: Show Vaclav drawing (winter-city background added elsewhere)
+            self.play(
+                self.unhighlight_card("Wechsler"),
+                self.unhighlight_card("MacInnes"),
+                self.fully_zoom_card("VMS"),
+            )
+            self.wait(1)
+
+        section4()
+
+        # ================================================================
+        # SECTION 5 — Part O' The Tradition (speculative history)
+        # Card-diagram shots only, back-to-back, no time-sync.
+        # ================================================================
+        def section5():
+            # "we're going to be generous and try our best to make up a story that ties it all together"
+            # "Sometime in the late 16th / early 17th century there lived Arquimedes de Sobreiro"
+            # PLAN: Make the whole diagram disappear except Sobreiro, then fill people
+            #       back in as they are named. Zoom on Sobreiro 1.1.
+            self.set_slide("Sobreiro", "1.1")
+            self.play(
+                self.frame_cards("Sobreiro", margin=10)
+            )  # dim everything but Sobreiro
+            self.play(self.opacity_except("Sobreiro"), run_time=2)
+            self.wait(1)
+            self.play(self.fully_zoom_card("Sobreiro"))
+            self.wait(1)
+            # TODO: choreograph fading each card back in as it is mentioned below,
+            #       rather than the single blanket restore used here for now.
+
+            # "He gathered a 'crew as a composite of traditions'"
+            # PLAN: Switch to Sobreiro 1.2
+            self.play(self.change_slide("Sobreiro", "1.2"))
+            self.wait(1)
+
+            # "some descendent followers of Sobreiro continued to preserve his tradition"
+            # PLAN: Zoom out slowly, pan to S org (not zoomed)
+            self.play(
+                self.opacity_except(opacity=1)
+            )  # (diagram progressively restored)
+            self.wait(1)
+            self.play(self.frame_cards("S_Org", margin=4), run_time=4)
+            self.wait(1)
+
+            # "Nineteen obsidian pieces for nineteen original crew members"
+            # PLAN: Pan to Artefacts
+            self.play(self.pan_to("Artefacts"))
+            self.wait(1)
+
+            # "though the archer himself was dead, The Archer's Tales kept his philosophy alive"
+            # PLAN: Show Sobreiro 1.3
+            self.play(self.fully_zoom_card("Sobreiro"))
+            self.play(self.change_slide("Sobreiro", "1.3"))
+            self.wait(1)
+
+            # "Until of course, the S organisation of Ekstrom, Durand, Feuerbach, Ferrara, and Straka"
+            # PLAN: Zoom into S org 1.4
+            self.set_slide("S_Org", "1.4")
+            self.play(self.fully_zoom_card("S_Org"))
+            self.wait(1)
+
+            # "They adopted his symbol"
+            # PLAN: Switch to S org 1.5
+            self.play(self.change_slide("S_Org", "1.5"))
+            self.wait(1)
+
+            # "shared his predilection for Birds, and ... fought for his cause of anarchy and freedom"
+            # PLAN: Switch to S org 1.6
+            self.play(self.change_slide("S_Org", "1.6"))
+            self.wait(1)
+
+            # "passed down ... to the family of Torsten Ekstrom ... when Durand discovered her cave paintings"
+            # PLAN: Show Durand and Ekstrom on diagram, then zoom out to show all those linked to the S
+            self.play(self.frame_cards("Durand", "Ekstrom"))
+            self.wait(1)
+            self.prepare_link("Caldeira", "Sobreiro")
+            self.prepare_link("S_Org", "Sobreiro")
+            self.play(self.frame_cards())
+            self.calculate_layout()
+            self.play(self.animate_update_layout(), run_time=3)
+            self.wait(1)
+            self.play(
+                self.add_link("S_Org", "Sobreiro"),
+                self.frame_cards("S_Org", "Durand", "Ekstrom", "Sobreiro", "VMS"),
+            )
+            self.wait(1)
+
+            # "Is it possible that F.X. Caldeira possessed another copy of the Archer's Tales?"
+            # PLAN: Connect Caldeira to Sobreiro on diagram (or draw on top)
+            self.play(self.frame_cards("Caldeira", "Sobreiro", margin=5))
+            self.play(self.animate_update_layout(), run_time=3)
+            self.wait(1)
+            self.play(self.add_link("Caldeira", "Sobreiro", width=12))
+            self.wait(1)
+
+            # "we can assume that Ekstrom's copy was kept safe by Straka and Summersby after Ekstrom's death"
+            # PLAN: Highlight Ekstrom, then Straka and Summersby
+            self.play(self.highlight_card("Ekstrom", width=8, color=mm.BLUE_E))
+            self.play(
+                self.highlight_card("Summersby", width=8, color=mm.BLUE_E),
+                self.highlight_card("VMS", width=8, color=mm.BLUE_E),
+            )
+            self.wait(0.5)
+            self.play(
+                *[self.unhighlight_card(c) for c in ["Ekstrom", "Summersby", "VMS"]]
+            )
+
+            # "the Archer's Tales would connect him to both his place in the S and his hope with Caldeira"
+            # PLAN: Highlight connections to use as a (blurred) background
+            self.play(
+                self.opacity_except(
+                    "Caldeira",
+                    "Sobreiro",
+                    "VMS",
+                    "Artefacts",
+                    edges=[("Caldeira", "Sobreiro")],
+                )
+            )
+            self.wait(1)
+            self.play(
+                self.opacity_except(opacity=1),
+                self.unhighlight_link("Caldeira", "Sobreiro"),
+            )
+            self.wait(1)
+
+            # "until it is stolen during the yellow/green phase ... We're guessing Moody sent Ilsa"
+            # PLAN: Zoom on Ilsa card 1.4
+            self.set_slide("Ilsa", "1.4")
+            self.play(self.fully_zoom_card("Ilsa"))
+            self.wait(1)
+
+            # "she felt guilty after his death, the final straw for her relationship with Moody"
+            # PLAN: Show Ilsa and Moody connection disappeared / crossed over
+            self.play(self.frame_cards("Ilsa", "Moody"))
+            self.wait(1)
+            self.play(self.g.links[("Moody", "Ilsa")].animate.set_opacity(0))
+            self.wait(1)
+
+            # "Who are Serin? Who are the mysterious men ... stalking Jen and Eric?"
+            # PLAN: Pan to each on diagram
+            self.play(self.pan_to("Serin"), self.highlight_card("Serin", width=8))
+            self.wait(1)
+            self.play(self.pan_to("Myst_Men"), self.highlight_card("Myst_Men", width=8))
+            self.wait(1)
+            self.play(self.unhighlight_card("Serin"), self.unhighlight_card("Myst_Men"))
+
+            # "Signe Rabe married Jean-Bernard Desjardins, and they started a new version of the S ... 'Serin'"
+            # PLAN: Connect Des and Sig to the S, then link the S to Serin
+            self.prepare_link("Desjardins", "Serin")
+            self.prepare_link("Signe", "Serin")
+            self.prepare_link("S_Org", "Serin")
+            self.calculate_layout()
+            self.play(
+                self.frame_cards("Desjardins", "Signe", "S_Org", "Serin", margin=5)
+            )
+            self.play(self.animate_update_layout(), run_time=5)
+            self.wait(1)
+            self.play(
+                self.add_link("Desjardins", "Serin"),
+                self.add_link("Signe", "Serin"),
+            )
+            self.wait(1)
+            self.play(self.add_link("S_Org", "Serin"))
+            self.wait(1)
+
+            # "They have the archer's tales, and the ongoing royalties to Straka's books"
+            # PLAN: Highlight Desjardins and signe connection to S Org and S Org to Sobreiro and S Org to Straka
+            self.play(
+                self.opacity_except(
+                    "Desjardins", "Signe", "Serin", "Sobreiro", "S_Org", "VMS"
+                )
+            )
+            self.play(
+                self.highlight_link("Desjardins", "Serin", color=mm.BLUE_E, width=12),
+                self.highlight_link("Signe", "Serin", color=mm.BLUE_E, width=12),
+                self.highlight_link("S_Org", "Sobreiro", color=mm.BLUE_E, width=12),
+                self.highlight_link("Serin", "S_Org", color=mm.BLUE_E, width=12),
+            )
+
+            self.wait(0.5)
+            self.play(self.highlight_link("S_Org", "VMS", color=mm.GREEN_E, width=12))
+
+            self.wait(1)
+            self.play(
+                self.opacity_except(opacity=1),
+                *[
+                    self.unhighlight_link(*l)
+                    for l in [
+                        ("Desjardins", "Serin"),
+                        ("Signe", "Serin"),
+                        ("S_Org", "Sobreiro"),
+                        ("VMS", "S_Org"),
+                        ("S_Org", "Serin"),
+                    ]
+                ],
+            )
+
+            # "Bouchard meanwhile had plenty of traitors from the original S (MacInnes, Looper, Weschler)"
+            # PLAN: Pan to the three traitors on diagram
+            self.play(
+                self.frame_cards("Bouchard", margin=5),
+                self.highlight_card("Bouchard", width=8),
+            )
+            self.play(
+                self.frame_cards("MacInnes", "Looper", "Wechsler", "Bouchard"),
+            )
+            self.play(
+                self.camera.frame.animate.shift((mm.LEFT + mm.DOWN) * 0.5),
+                self.highlight_card("MacInnes", width=8),
+                run_time=0.5,
+            )
+            self.play(
+                self.camera.frame.animate.shift((mm.RIGHT) * 0.5),
+                self.highlight_card("Looper", width=8),
+                run_time=0.5,
+            )
+            self.play(
+                self.camera.frame.animate.shift((mm.UP) * 0.5),
+                self.highlight_card("Wechsler", width=8),
+                run_time=0.5,
+            )
+
+            self.wait(1)
+            self.play(
+                *[
+                    self.unhighlight_card(c)
+                    for c in ["MacInnes", "Looper", "Wechsler", "Bouchard"]
+                ],
+            )
+
+            # "All of this ... the birds and the wolves, is cyclical"
+            # PLAN: Show diagram (birds & wolves sketch handled elsewhere)
+            self.starth()
+            self.play(self.frame_cards())
+            self.wait(1)
+
+            # "the present Straka and Caldeira, Durand and Ekstrom, Sola and Sobreiro ... Jen and Eric"
+            # PLAN: Show diagram, move from Vaclav and Caldeira up to Jen and Eric
+
+            self.play(self.frame_cards("VMS", "Caldeira", margin=5))
+            self.play(
+                self.highlight_link("VMS", "Caldeira", color=mm.PINK),
+                self.opacity_except("VMS", "Caldeira", "Jen", "Eric"),
+            )
+            self.play(
+                self.frame_cards("Jen", "Eric"),
+                self.highlight_link("Jen", "Eric", color=mm.PINK),
+                run_time=3,
+            )
+            self.wait(1)
+            self.play(
+                self.opacity_except(opacity=1),
+                self.unhighlight_link("Jen", "Eric"),
+                self.unhighlight_link("VMS", "Caldeira"),
+            )
+            self.endh()
+
+            # ---- Section 6 (Final thoughts): single diagram beat ----
+            # "there's a huge amount you can get to with ... effort, and then more with speculation"
+            # PLAN: Show diagram focusing on S org, then pan to Sobreiro side
+            self.play(self.fully_zoom_card("S_Org"))
+            self.play(self.frame_cards("S_Org", margin=14), run_time=10)
+            self.wait(1)
+            self.play(self.pan_to("Sobreiro"), run_time=3)
+            self.wait(1)
+            self.endh()
+
+        section5()

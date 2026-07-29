@@ -76,14 +76,22 @@ class CardGraphScene(mm.MovingCameraScene):
             return NULL_ANIM
         return self.g.animate.add_card_from(name1, name2, start_zoomed=start_zoomed)
 
-    def add_link(self, name1, name2, other_end=False, from_point=None):
+    def add_link(
+        self,
+        name1,
+        name2,
+        other_end=False,
+        from_point=None,
+        color=LINK_COLOR,
+        width=LINK_WIDTH,
+    ):
         if self.skip_animations:
             self.g.add_link(name1, name2)
             self.add(self.g.links[name1, name2])
             return NULL_ANIM
 
         return self.g.animate.add_link(
-            name1, name2, other_end=other_end, from_point=from_point  # type: ignore[attr-defined]
+            name1, name2, other_end=other_end, from_point=from_point, color=color, width=width  # type: ignore[attr-defined]
         )
 
     def remove_link(self, name1, name2):
@@ -256,20 +264,20 @@ class CardGraphScene(mm.MovingCameraScene):
         )
         return mm.AnimationGroup(zoom_camera, *update_icons)
 
-    def highlight_link(self, name1, name2, color=mm.PURE_RED):
+    def highlight_link(self, name1, name2, color=mm.PURE_RED, width=12):
         if self.skip_animations:
             return NULL_ANIM
 
         if (name1, name2) not in self.g.links:
             return (
                 self.g.links[(name2, name1)]
-                .animate.set_stroke_width(12)
+                .animate.set_stroke_width(width)
                 .set_color(color)
             )
         else:
             return (
                 self.g.links[(name1, name2)]
-                .animate.set_stroke_width(12)
+                .animate.set_stroke_width(width)
                 .set_color(color)
             )
 
@@ -289,10 +297,10 @@ class CardGraphScene(mm.MovingCameraScene):
                 .set_color(LINK_COLOR),
             )
 
-    def highlight_card(self, name, color=mm.PURE_RED):
+    def highlight_card(self, name, color=mm.PURE_RED, width=12):
         if self.skip_animations:
             return NULL_ANIM
-        return self.g.cards[name].rect.animate.set_stroke(width=12, color=color)
+        return self.g.cards[name].rect.animate.set_stroke(width=width, color=color)
 
     def unhighlight_card(self, name):
         if self.skip_animations:
@@ -399,7 +407,6 @@ class CardGraphScene(mm.MovingCameraScene):
         self.g.cards[name].current_icon = key
 
     def wait_until(self, min, sec, cent):
-        return
         if self.skip_animations:
             return
 
